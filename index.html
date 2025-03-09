@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tango Video Progress Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #4a6cfa;
+      cursor: pointer;
+    }
+    .counter-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .counter {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Viršutinė juosta (formos dalis) */
+    .upload-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background-color: #eef;
+      border-radius: 8px;
+
+      /* Dėl patogesnio išdėstymo vienoje eilutėje */
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    .upload-section input[type="text"],
+    .upload-section select {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .upload-section button {
+      background-color: #4a6cfa;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .upload-section button:hover {
+      background-color: #3a5bd8;
+    }
+    #video-file {
+      display: none; /* failo pasirinkimo mygtukas */
+    }
+    .custom-file-upload {
+      background-color: #4a6cfa;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-block;
+      font-size: 14px;
+    }
+    .custom-file-upload:hover {
+      background-color: #3a5bd8;
+    }
+
+    /* Video kortelės */
+    .video-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .video-card {
+      width: 280px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #f9f9f9;
+      padding: 10px;
+      text-align: center;
+      position: relative;
+    }
+    .thumbnail, video {
+      width: 100%;
+      height: auto;
+      cursor: pointer;
+      border-radius: 5px;
+      object-fit: cover;
+    }
+    .blurred-thumbnail {
+      filter: blur(4px);
+    }
+    .delete-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background-color: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    /* Kategorijos + slider vienoje eilutėje */
+    .meta-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .meta-container select {
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .progress {
+      width: 80px; /* mažesnis plotis slideriui */
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1 id="editable-title" onclick="editTitle()">Tango Video Progress Tracker</h1>
+
+  <div class="counter-container">
+    <!-- D. vietoj "Tango" dabar "Aktyvios pamokos" -->
+    <div class="counter">Aktyvios pamokos: <span id="active-count">0</span></div>
+    <div class="counter">Užbaigtos pamokos: <span id="completed-count">0</span></div>
+  </div>
+
+  <div class="upload-section">
+    <input type="text" id="video-url" placeholder="Youtube nuoroda">
+    <select id="video-category">
+      <option value="Tango">Tango</option>
+      <option value="Milonga">Milonga</option>
+      <option value="Valsas">Valsas</option>
+      <option value="Milongueros">Milongueros</option>
+      <option value="Nuevo">Nuevo</option>
+      <option value="Kita">Kita</option>
+    </select>
+    <button onclick="addYoutubeVideo()">Pridėti</button>
+
+    <label for="video-file" class="custom-file-upload">Pridėti video failą</label>
+    <input type="file" id="video-file" accept="video/*" onchange="uploadLocalVideo()">
+  </div>
+
+  <!-- Kategorijų skiltys -->
+  <h2>Tango</h2>
+  <div class="video-container" id="tango-videos"></div>
+
+  <h2>Milonga</h2>
+  <div class="video-container" id="milonga-videos"></div>
+
+  <h2>Valsas</h2>
+  <div class="video-container" id="valsas-videos"></div>
+
+  <h2>Milongueros</h2>
+  <div class="video-container" id="milongueros-videos"></div>
+
+  <h2>Nuevo</h2>
+  <div class="video-container" id="nuevo-videos"></div>
+
+  <h2>Kita</h2>
+  <div class="video-container" id="kita-videos"></div>
+
+  <!-- Užbaigtos pamokos -->
+  <h2>Užbaigtos pamokos</h2>
+  <div class="video-container" id="completed-videos"></div>
+
+  <script>
+    // Visos galimos kategorijos
+    const ALL_CATEGORIES = ["Tango", "Milonga", "Valsas", "Milongueros", "Nuevo", "Kita"];
+
+    let videos = JSON.parse(localStorage.getItem("videoProgress")) || [];
+
+    function saveProgress() {
+      localStorage.setItem("videoProgress", JSON.stringify(videos));
+    }
+
+    function renderVideos() {
+      // Išvalome visas kategorijų sekcijas + "Užbaigtos"
+      document.getElementById("tango-videos").innerHTML = "";
+      document.getElementById("milonga-videos").innerHTML = "";
+      document.getElementById("valsas-videos").innerHTML = "";
+      document.getElementById("milongueros-videos").innerHTML = "";
+      document.getElementById("nuevo-videos").innerHTML = "";
+      document.getElementById("kita-videos").innerHTML = "";
+      document.getElementById("completed-videos").innerHTML = "";
+
+      let tangoCount = 0;
+      let completedCount = 0;
+
+      videos.forEach((video, index) => {
+        const videoCard = document.createElement("div");
+        videoCard.className = "video-card";
+
+        // Sukuriame <video> arba <img> priklausomai nuo tipo
+        let mediaElement;
+        if (video.type === "local") {
+          mediaElement = document.createElement("video");
+          mediaElement.src = video.url;
+          mediaElement.controls = true;
+          mediaElement.className = "thumbnail";
+        } else {
+          mediaElement = document.createElement("img");
+          mediaElement.src = `https://img.youtube.com/vi/${video.id}/mqdefault.jpg`;
+          mediaElement.className = "thumbnail";
+          mediaElement.onclick = () => {
+            window.open(`https://www.youtube.com/watch?v=${video.id}`, "_blank");
+          };
+        }
+
+        // Jei progress = 100, užbluriname miniatiūrą
+        if (video.progress === 100) {
+          mediaElement.classList.add("blurred-thumbnail");
+        }
+
+        // Video pavadinimas (paspaudus – redaguojamas)
+        const title = document.createElement("h3");
+        title.textContent = video.title;
+        title.style.cursor = "pointer";
+        title.onclick = () => editVideoTitle(index);
+
+        // Mygtukas ištrinti
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "X";
+        deleteBtn.onclick = () => removeVideo(index);
+
+        // Kategorijos dropdown (keičia esamo video kategoriją)
+        const categorySelect = document.createElement("select");
+        categorySelect.className = "category-dropdown";
+        ALL_CATEGORIES.forEach(cat => {
+          const option = document.createElement("option");
+          option.value = cat;
+          option.textContent = cat;
+          if (video.category === cat) {
+            option.selected = true;
+          }
+          categorySelect.appendChild(option);
+        });
+        categorySelect.onchange = () => {
+          videos[index].category = categorySelect.value;
+          saveProgress();
+          renderVideos();
+        };
+
+        // Progreso slankiklis: tik 0, 50, 100
+        const progress = document.createElement("input");
+        progress.type = "range";
+        progress.min = 0;
+        progress.max = 100;
+        progress.step = 50; // 3 reikšmės
+        progress.value = video.progress;
+        progress.className = "progress";
+        progress.oninput = (e) => {
+          videos[index].progress = parseInt(e.target.value);
+          saveProgress();
+          renderVideos();
+        };
+
+        // Sudedame slider ir kategoriją į vieną konteinerį
+        const metaContainer = document.createElement("div");
+        metaContainer.className = "meta-container";
+        metaContainer.append(categorySelect, progress);
+
+        // Surenkame elementus į kortelę
+        videoCard.append(
+          deleteBtn,
+          mediaElement,
+          title,
+          metaContainer
+        );
+
+        // Jeigu 100% – "Užbaigtos pamokos"
+        if (video.progress === 100) {
+          document.getElementById("completed-videos").prepend(videoCard);
+          completedCount++;
+        } else {
+          // Priklausomai nuo kategorijos rodome atitinkamoje sekcijoje
+          switch (video.category) {
+            case "Tango":
+              document.getElementById("tango-videos").prepend(videoCard);
+              tangoCount++;
+              break;
+            case "Milonga":
+              document.getElementById("milonga-videos").prepend(videoCard);
+              break;
+            case "Valsas":
+              document.getElementById("valsas-videos").prepend(videoCard);
+              break;
+            case "Milongueros":
+              document.getElementById("milongueros-videos").prepend(videoCard);
+              break;
+            case "Nuevo":
+              document.getElementById("nuevo-videos").prepend(videoCard);
+              break;
+            case "Kita":
+              document.getElementById("kita-videos").prepend(videoCard);
+              break;
+            default:
+              // Jeigu nėra kategorijos, dedame į Tango
+              document.getElementById("tango-videos").prepend(videoCard);
+              tangoCount++;
+          }
+        }
+      });
+
+      // Atnaujiname skaitliukus (Aktyvios pamokos = Tango)
+      document.getElementById("active-count").textContent = tangoCount;
+      document.getElementById("completed-count").textContent = completedCount;
+    }
+
+    // Antraštės keitimas
+    function editTitle() {
+      const newTitle = prompt("Įveskite naują antraštę:");
+      if (newTitle) {
+        document.getElementById("editable-title").textContent = newTitle;
+        localStorage.setItem("trackerTitle", newTitle);
+      }
+    }
+
+    // Ištrinti video
+    function removeVideo(index) {
+      videos.splice(index, 1);
+      saveProgress();
+      renderVideos();
+    }
+
+    // Įkelti YouTube video
+    function addYoutubeVideo() {
+      const urlInput = document.getElementById("video-url").value.trim();
+      const categorySelect = document.getElementById("video-category");
+      const selectedCategory = categorySelect.value;
+
+      if (!urlInput) {
+        alert("Prašome įvesti YouTube nuorodą");
+        return;
+      }
+      let videoId = "";
+      try {
+        const urlObj = new URL(urlInput);
+        if (urlObj.hostname === "youtu.be") {
+          videoId = urlObj.pathname.slice(1);
+        } else if (urlObj.hostname.includes("youtube.com")) {
+          videoId = urlObj.searchParams.get("v");
+        }
+      } catch (error) {
+        alert("Neteisinga YouTube nuoroda");
+        return;
+      }
+      if (!videoId) {
+        alert("Neteisinga YouTube nuoroda");
+        return;
+      }
+
+      // C. vietoje ankstesnio lauko, iššoka prompt dėl pavadinimo
+      const videoTitle = prompt("Įveskite video pavadinimą");
+      if (!videoTitle) {
+        return;
+      }
+
+      const newVideo = {
+        type: "youtube",
+        id: videoId,
+        title: videoTitle,
+        progress: 0,
+        category: selectedCategory
+      };
+      videos.push(newVideo);
+      saveProgress();
+      renderVideos();
+
+      // Išvalome laukelį
+      document.getElementById("video-url").value = "";
+      categorySelect.value = "Tango";
+    }
+
+    // Įkelti vietinį video (liko su URL.createObjectURL)
+    function uploadLocalVideo() {
+      const fileInput = document.getElementById("video-file");
+      if (fileInput.files.length === 0) {
+        return;
+      }
+      const file = fileInput.files[0];
+      const videoURL = URL.createObjectURL(file);
+
+      // Paprašome pavadinimo (kaip su YouTube)
+      const videoTitle = prompt("Įveskite video pavadinimą", file.name);
+      if (!videoTitle) {
+        return;
+      }
+      const categorySelect = document.getElementById("video-category");
+      const selectedCategory = categorySelect.value;
+
+      const newVideo = {
+        type: "local",
+        url: videoURL,
+        title: videoTitle,
+        progress: 0,
+        category: selectedCategory
+      };
+      videos.push(newVideo);
+      saveProgress();
+      renderVideos();
+
+      fileInput.value = "";
+    }
+
+    // Redaguoti esamo video pavadinimą
+    function editVideoTitle(index) {
+      const newTitle = prompt("Įveskite naują video pavadinimą:", videos[index].title);
+      if (newTitle) {
+        videos[index].title = newTitle;
+        saveProgress();
+        renderVideos();
+      }
+    }
+
+    // Užkraunant puslapį
+    window.onload = function() {
+      const savedTitle = localStorage.getItem("trackerTitle");
+      if (savedTitle) {
+        document.getElementById("editable-title").textContent = savedTitle;
+      }
+      renderVideos();
+    }
+  </script>
+</body>
+</html>
