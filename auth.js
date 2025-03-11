@@ -154,7 +154,51 @@ const Auth = {
       document.getElementById('auth-container').style.display = 'none';
       document.getElementById('app-container').style.display = 'block';
       
-      // Užkrauname vartotojo duomenis
+      // Užkrauname vartotojo duomenis onUserSignedIn(user) {
+  console.log('Prisijungęs vartotojas:', user.displayName || user.email);
+  
+  // Patikriname, ar el. paštas patvirtintas
+  if (user.emailVerified || user.providerData[0].providerId === 'google.com') {
+    // Rodome aplikaciją, slepiame autentifikaciją
+    document.getElementById('auth-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    
+    // PAPRASTAS MIGRAVIMAS: Perkeliam duomenis iš localStorage į Firebase
+    const videosData = localStorage.getItem('tangoVideos');
+    const completedData = localStorage.getItem('tangoCompletedIds');
+    
+    if (videosData || completedData) {
+      const videos = videosData ? JSON.parse(videosData) : [];
+      const completedIds = completedData ? JSON.parse(completedData) : [];
+      
+      // Įrašome duomenis į Firebase
+      const userRef = firebase.database().ref('users/' + user.uid);
+      userRef.set({
+        videos: videos,
+        completedIds: completedIds,
+        lastUpdated: new Date().toISOString()
+      }).then(() => {
+        console.log('Duomenys sėkmingai perkelti į Firebase');
+        // Užkrauname vartotojo duomenis
+        DataStore.loadUserData(user.uid);
+      }).catch(error => {
+        console.error('Klaida perkeliant duomenis:', error);
+        // Vis tiek užkrauname duomenis
+        DataStore.loadUserData(user.uid);
+      });
+    } else {
+      // Jei nėra lokalių duomenų, tiesiog užkrauname iš Firebase
+      DataStore.loadUserData(user.uid);
+    }
+  } else {
+    // Jei el. paštas nepatvirtintas, rodome pranešimą
+    alert('Prašome patvirtinti savo el. paštą prieš tęsiant. Patikrinkite savo el. pašto dėžutę.');
+    this.sendVerificationEmail();
+    
+    // Atsijungiame, kol el. paštas nepatvirtintas
+    this.signOut();
+  }
+}
       DataStore.loadUserData(user.uid);
     } else {
       // Jei el. paštas nepatvirtintas, rodome pranešimą
