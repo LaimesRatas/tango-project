@@ -6,6 +6,111 @@
   <title>Tango Video Progress Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Autentifikacijos konteineris */
+    #auth-container {
+      max-width: 400px;
+      margin: 50px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .auth-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .auth-header h2 {
+      font-family: 'Dancing Script', cursive;
+      font-size: 32px;
+      color: #ff69b4;
+    }
+    
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .auth-input {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    
+    .auth-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .auth-button {
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4a6cfa;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .auth-button:hover {
+      background-color: #3a5bd8;
+    }
+    
+    .google-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background-color: white;
+      color: #757575;
+      border: 1px solid #ddd;
+    }
+    
+    .google-button:hover {
+      background-color: #f1f1f1;
+    }
+    
+    .google-icon {
+      width: 18px;
+      height: 18px;
+    }
+    
+    .separator {
+      text-align: center;
+      margin: 10px 0;
+      color: #757575;
+      position: relative;
+    }
+    
+    .separator::before,
+    .separator::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background-color: #ddd;
+    }
+    
+    .separator::before {
+      left: 0;
+    }
+    
+    .separator::after {
+      right: 0;
+    }
+  </style>
 </head>
 <body>
   <!-- Autentifikacijos konteineris -->
@@ -13,7 +118,23 @@
     <div class="auth-header">
       <h2>Prisijungimas prie Tango Video Tracker</h2>
     </div>
-    <div id="firebaseui-auth-container"></div>
+    <div class="auth-form">
+      <div class="form-group">
+        <input type="email" id="email" placeholder="El. paštas" class="auth-input">
+      </div>
+      <div class="form-group">
+        <input type="password" id="password" placeholder="Slaptažodis" class="auth-input">
+      </div>
+      <div class="auth-buttons">
+        <button id="login-with-email" class="auth-button">Prisijungti</button>
+        <button id="register-with-email" class="auth-button">Registruotis</button>
+        <div class="separator">ARBA</div>
+        <button id="login-with-google" class="auth-button google-button">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="google-icon">
+          Prisijungti su Google
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Aplikacijos konteineris (bus rodomas tik prisijungus) -->
@@ -141,16 +262,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-database-compat.js"></script>
   
-  <!-- Firebase UI -->
-  <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
-  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
-  
   <!-- Firebase konfigūracija -->
   <script src="firebase-config.js"></script>
-  <script src="auth.js"></script>
 
   <!-- JavaScript moduliai -->
   <script src="dataStore.js"></script>
+  <script src="auth.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
 </body>
