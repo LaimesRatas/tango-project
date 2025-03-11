@@ -50,6 +50,22 @@ const Auth = {
   },
   
   /**
+   * Siunčia el. pašto patvirtinimo laišką
+   */
+  sendVerificationEmail() {
+    if (firebase.auth().currentUser && !firebase.auth().currentUser.emailVerified) {
+      firebase.auth().currentUser.sendEmailVerification()
+        .then(() => {
+          alert('Patvirtinimo laiškas išsiųstas į jūsų el. paštą. Prašome patvirtinti savo paskyrą.');
+        })
+        .catch((error) => {
+          console.error('Error sending verification email:', error);
+          alert('Klaida siunčiant patvirtinimo laišką: ' + error.message);
+        });
+    }
+  },
+  
+  /**
    * Prisijungimas su Google
    */
   signInWithGoogle() {
@@ -92,14 +108,32 @@ const Auth = {
       return;
     }
     
-    if (password.length < 6) {
-      alert('Slaptažodis turi būti bent 6 simbolių ilgio');
+    // Patikrinti slaptažodžio stiprumą
+    const hasMinLength = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    const isStrongPassword = hasMinLength && hasUppercase && hasLowercase && hasNumbers && hasSpecialChar;
+    
+    if (!isStrongPassword) {
+      let errorMsg = 'Slaptažodis per silpnas. Jis turi turėti:';
+      if (!hasMinLength) errorMsg += '\n- bent 8 simbolius';
+      if (!hasUppercase) errorMsg += '\n- bent vieną didžiąją raidę';
+      if (!hasLowercase) errorMsg += '\n- bent vieną mažąją raidę';
+      if (!hasNumbers) errorMsg += '\n- bent vieną skaičių';
+      if (!hasSpecialChar) errorMsg += '\n- bent vieną specialų simbolį (!@#$%^&*(),.?":{}|<>)';
+      
+      alert(errorMsg);
       return;
     }
     
     firebase.auth().createUserWithEmailAndPassword(email, password)
       .then((userCredential) => {
         console.log('Registration successful');
+        // Siunčiame patvirtinimo laišką
+        this.sendVerificationEmail();
       })
       .catch((error) => {
         console.error('Registration error:', error);
@@ -114,12 +148,22 @@ const Auth = {
   onUserSignedIn(user) {
     console.log('Prisijungęs vartotojas:', user.displayName || user.email);
     
-    // Rodome aplikaciją, slepiame autentifikaciją
-    document.getElementById('auth-container').style.display = 'none';
-    document.getElementById('app-container').style.display = 'block';
-    
-    // Užkrauname vartotojo duomenis
-    DataStore.loadUserData(user.uid);
+    // Patikriname, ar el. paštas patvirtintas
+    if (user.emailVerified || user.providerData[0].providerId === 'google.com') {
+      // Rodome aplikaciją, slepiame autentifikaciją
+      document.getElementById('auth-container').style.display = 'none';
+      document.getElementById('app-container').style.display = 'block';
+      
+      // Užkrauname vartotojo duomenis
+      DataStore.loadUserData(user.uid);
+    } else {
+      // Jei el. paštas nepatvirtintas, rodome pranešimą
+      alert('Prašome patvirtinti savo el. paštą prieš tęsiant. Patikrinkite savo el. pašto dėžutę.');
+      this.sendVerificationEmail();
+      
+      // Atsijungiame, kol el. paštas nepatvirtintas
+      this.signOut();
+    }
   },
   
   /**
