@@ -6,6 +6,7 @@ const DataStore = {
   // Duomenų kintamieji
   videos: [],
   completedIds: [],
+  userId: null,
   
   // Duomenų bazės konfigūracija
   db: null,
@@ -65,31 +66,90 @@ const DataStore = {
   },
   
   /**
-   * Užkrauna išsaugotus duomenis iš localStorage
+   * Užkrauna vartotojo duomenis iš Firebase
+   * @param {string} userId - Vartotojo ID
    */
-  loadData() {
+  async loadUserData(userId) {
+    this.userId = userId;
+    console.log('Loading user data for ID:', userId);
+    
+    try {
+      // Gauname duomenis iš Firebase
+      const userRef = firebase.database().ref('users/' + userId);
+      const snapshot = await userRef.once('value');
+      const userData = snapshot.val() || {};
+      
+      // Nustatome video ir completedIds
+      if (userData.videos) {
+        this.videos = userData.videos;
+        console.log(`Loaded ${this.videos.length} videos from Firebase`);
+      } else {
+        this.videos = [];
+        console.log('No videos found in Firebase, starting with empty list');
+      }
+      
+      if (userData.completedIds) {
+        this.completedIds = userData.completedIds;
+        console.log(`Loaded ${this.completedIds.length} completed IDs from Firebase`);
+      } else {
+        this.completedIds = [];
+      }
+      
+      // Atnaujiname UI
+      UI.renderVideos();
+      UI.updateCounters();
+    } catch (error) {
+      console.error('Error loading user data from Firebase:', error);
+      
+      // Jei Firebase nepavyko, bandome užkrauti iš localStorage
+      this.loadLocalData();
+    }
+  },
+  
+  /**
+   * Užkrauna išsaugotus duomenis iš localStorage (atsarginis variantas)
+   */
+  loadLocalData() {
     // Bandome užkrauti išsaugotus video
     const videosData = localStorage.getItem('tangoVideos');
     if (videosData) {
       this.videos = JSON.parse(videosData);
-      console.log(`Loaded ${this.videos.length} videos from storage`);
+      console.log(`Loaded ${this.videos.length} videos from local storage`);
     }
     
     // Bandome užkrauti užbaigtų video ID sąrašą
     const completedData = localStorage.getItem('tangoCompletedIds');
     if (completedData) {
       this.completedIds = JSON.parse(completedData);
-      console.log(`Loaded ${this.completedIds.length} completed video IDs`);
+      console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
     }
   },
   
   /**
-   * Išsaugo duomenis į localStorage
+   * Išsaugo duomenis į Firebase ir localStorage
    */
-  saveData() {
+  async saveData() {
+    // Išsaugome duomenis į localStorage kaip atsarginę kopiją
     localStorage.setItem('tangoVideos', JSON.stringify(this.videos));
     localStorage.setItem('tangoCompletedIds', JSON.stringify(this.completedIds));
-    console.log('Data saved to storage');
+    console.log('Data saved to local storage');
+    
+    // Jei turime prisijungusį vartotoją, išsaugome duomenis į Firebase
+    if (this.userId) {
+      try {
+        const userRef = firebase.database().ref('users/' + this.userId);
+        await userRef.update({
+          videos: this.videos,
+          completedIds: this.completedIds,
+          lastUpdated: new Date().toISOString()
+        });
+        console.log('Data saved to Firebase');
+      } catch (error) {
+        console.error('Error saving data to Firebase:', error);
+      }
+    } else {
+      console.log('Data not saved to Firebase: user not authenticated');
+    }
   },
   
   /**

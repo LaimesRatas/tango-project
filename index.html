@@ -8,121 +8,146 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Header with navigation -->
-  <div class="header">
-    <div class="nav-menu">
-      <img src="logotipas.png" alt="Tango Logo" class="logo">
-      <a class="nav-item nav-active">Mano video</a>
-      <a class="nav-item nav-inactive">Visi video</a>
-      <a class="nav-item nav-inactive">Tango iššūkis</a>
+  <!-- Autentifikacijos konteineris -->
+  <div id="auth-container">
+    <div class="auth-header">
+      <h2>Prisijungimas prie Tango Video Tracker</h2>
     </div>
-    
-    <div class="counter-container">
-      <div class="counter">
-        <span class="counter-number" id="active-count">0</span>
-        <span class="counter-label">Procese</span>
-      </div>
-      <div class="counter">
-        <span class="counter-number" id="completed-count">0</span>
-        <span class="counter-label">Užbaigta</span>
-      </div>
-      <div class="future-menu">
-        Space for future menu
-      </div>
-    </div>
-  </div>
-  
-  <!-- Upload buttons -->
-  <div class="upload-section">
-    <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube nuorodą</button>
-    <button class="upload-button" id="file-upload-btn">Pridėti video failą</button>
-    <input type="file" id="video-file" accept="video/*">
-  </div>
-  
-  <!-- Category sections -->
-  <div class="category-section tango">
-    <h2 class="category-header" data-category="tango"><span class="toggle-icon">+</span>Tango</h2>
-    <div class="video-container" id="tango-videos"></div>
-  </div>
-  
-  <div class="category-section milonga">
-    <h2 class="category-header" data-category="milonga"><span class="toggle-icon">+</span>Milonga</h2>
-    <div class="video-container" id="milonga-videos"></div>
-  </div>
-  
-  <div class="category-section vals">
-    <h2 class="category-header" data-category="vals"><span class="toggle-icon">+</span>Vals</h2>
-    <div class="video-container" id="vals-videos"></div>
-  </div>
-  
-  <div class="category-section milonguero">
-    <h2 class="category-header" data-category="milonguero"><span class="toggle-icon">+</span>Milonguero style</h2>
-    <div class="video-container" id="milonguero-videos"></div>
-  </div>
-  
-  <div class="category-section nuevo">
-    <h2 class="category-header" data-category="nuevo"><span class="toggle-icon">+</span>Nuevo style</h2>
-    <div class="video-container" id="nuevo-videos"></div>
-  </div>
-  
-  <div class="category-section embellishments">
-    <h2 class="category-header" data-category="embellishments"><span class="toggle-icon">+</span>Embellishments</h2>
-    <div class="video-container" id="embellishments-videos"></div>
-  </div>
-  
-  <div class="category-section other">
-    <h2 class="category-header" data-category="other"><span class="toggle-icon">+</span>Other</h2>
-    <div class="video-container" id="other-videos"></div>
-  </div>
-  
-  <!-- Completed videos section -->
-  <div class="category-section tango">
-    <h2 class="category-header" data-category="completed"><span class="toggle-icon">+</span>Užbaigtos pamokos</h2>
-    <div class="video-container" id="completed-videos"></div>
+    <div id="firebaseui-auth-container"></div>
   </div>
 
-  <!-- Popup for YouTube upload -->
-  <div class="popup-container" id="youtube-popup">
-    <div class="popup">
-      <h3>Įkelti YouTube video</h3>
-      <input type="text" id="youtube-url" placeholder="YouTube nuoroda">
-      <input type="text" id="youtube-title" placeholder="Video pavadinimas">
-      <select id="youtube-category">
-        <option value="tango">Tango</option>
-        <option value="milonga">Milonga</option>
-        <option value="vals">Vals</option>
-        <option value="milonguero">Milonguero style</option>
-        <option value="nuevo">Nuevo style</option>
-        <option value="embellishments">Embellishments</option>
-        <option value="other">Other</option>
-      </select>
-      <button id="add-youtube-btn">Pridėti</button>
-      <button id="cancel-youtube-btn">Atšaukti</button>
-    </div>
-  </div>
-  
-  <!-- Popup for local file upload -->
-  <div class="popup-container" id="file-popup">
-    <div class="popup">
-      <h3>Įkelti video failą</h3>
-      <input type="text" id="file-title" placeholder="Video pavadinimas">
-      <select id="file-category">
-        <option value="tango">Tango</option>
-        <option value="milonga">Milonga</option>
-        <option value="vals">Vals</option>
-        <option value="milonguero">Milonguero style</option>
-        <option value="nuevo">Nuevo style</option>
-        <option value="embellishments">Embellishments</option>
-        <option value="other">Other</option>
-      </select>
-      <div id="file-size-limit" class="file-size-limit">Failo dydis neturi viršyti 500MB</div>
-      <div id="upload-progress" class="upload-progress">
-        <div id="upload-progress-bar" class="upload-progress-bar"></div>
+  <!-- Aplikacijos konteineris (bus rodomas tik prisijungus) -->
+  <div id="app-container" style="display: none;">
+    <!-- Header with navigation -->
+    <div class="header">
+      <div class="nav-menu">
+        <img src="logotipas.png" alt="Tango Logo" class="logo">
+        <a class="nav-item nav-active">Mano video</a>
+        <a class="nav-item nav-inactive">Visi video</a>
+        <a class="nav-item nav-inactive">Tango iššūkis</a>
       </div>
-      <button id="add-file-btn">Pridėti</button>
-      <button id="cancel-file-btn">Atšaukti</button>
+      
+      <div class="counter-container">
+        <div class="counter">
+          <span class="counter-number" id="active-count">0</span>
+          <span class="counter-label">Procese</span>
+        </div>
+        <div class="counter">
+          <span class="counter-number" id="completed-count">0</span>
+          <span class="counter-label">Užbaigta</span>
+        </div>
+        <div class="future-menu">
+          Space for future menu
+        </div>
+      </div>
+    </div>
+    
+    <!-- Upload buttons -->
+    <div class="upload-section">
+      <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube nuorodą</button>
+      <button class="upload-button" id="file-upload-btn">Pridėti video failą</button>
+      <input type="file" id="video-file" accept="video/*">
+      <button class="upload-button" id="sign-out-btn">Atsijungti</button>
+    </div>
+    
+    <!-- Category sections -->
+    <div class="category-section tango">
+      <h2 class="category-header" data-category="tango"><span class="toggle-icon">+</span>Tango</h2>
+      <div class="video-container" id="tango-videos"></div>
+    </div>
+    
+    <div class="category-section milonga">
+      <h2 class="category-header" data-category="milonga"><span class="toggle-icon">+</span>Milonga</h2>
+      <div class="video-container" id="milonga-videos"></div>
+    </div>
+    
+    <div class="category-section vals">
+      <h2 class="category-header" data-category="vals"><span class="toggle-icon">+</span>Vals</h2>
+      <div class="video-container" id="vals-videos"></div>
+    </div>
+    
+    <div class="category-section milonguero">
+      <h2 class="category-header" data-category="milonguero"><span class="toggle-icon">+</span>Milonguero style</h2>
+      <div class="video-container" id="milonguero-videos"></div>
+    </div>
+    
+    <div class="category-section nuevo">
+      <h2 class="category-header" data-category="nuevo"><span class="toggle-icon">+</span>Nuevo style</h2>
+      <div class="video-container" id="nuevo-videos"></div>
+    </div>
+    
+    <div class="category-section embellishments">
+      <h2 class="category-header" data-category="embellishments"><span class="toggle-icon">+</span>Embellishments</h2>
+      <div class="video-container" id="embellishments-videos"></div>
+    </div>
+    
+    <div class="category-section other">
+      <h2 class="category-header" data-category="other"><span class="toggle-icon">+</span>Other</h2>
+      <div class="video-container" id="other-videos"></div>
+    </div>
+    
+    <!-- Completed videos section -->
+    <div class="category-section tango">
+      <h2 class="category-header" data-category="completed"><span class="toggle-icon">+</span>Užbaigtos pamokos</h2>
+      <div class="video-container" id="completed-videos"></div>
+    </div>
+
+    <!-- Popup for YouTube upload -->
+    <div class="popup-container" id="youtube-popup">
+      <div class="popup">
+        <h3>Įkelti YouTube video</h3>
+        <input type="text" id="youtube-url" placeholder="YouTube nuoroda">
+        <input type="text" id="youtube-title" placeholder="Video pavadinimas">
+        <select id="youtube-category">
+          <option value="tango">Tango</option>
+          <option value="milonga">Milonga</option>
+          <option value="vals">Vals</option>
+          <option value="milonguero">Milonguero style</option>
+          <option value="nuevo">Nuevo style</option>
+          <option value="embellishments">Embellishments</option>
+          <option value="other">Other</option>
+        </select>
+        <button id="add-youtube-btn">Pridėti</button>
+        <button id="cancel-youtube-btn">Atšaukti</button>
+      </div>
+    </div>
+    
+    <!-- Popup for local file upload -->
+    <div class="popup-container" id="file-popup">
+      <div class="popup">
+        <h3>Įkelti video failą</h3>
+        <input type="text" id="file-title" placeholder="Video pavadinimas">
+        <select id="file-category">
+          <option value="tango">Tango</option>
+          <option value="milonga">Milonga</option>
+          <option value="vals">Vals</option>
+          <option value="milonguero">Milonguero style</option>
+          <option value="nuevo">Nuevo style</option>
+          <option value="embellishments">Embellishments</option>
+          <option value="other">Other</option>
+        </select>
+        <div id="file-size-limit" class="file-size-limit">Failo dydis neturi viršyti 500MB</div>
+        <div id="upload-progress" class="upload-progress">
+          <div id="upload-progress-bar" class="upload-progress-bar"></div>
+        </div>
+        <button id="add-file-btn">Pridėti</button>
+        <button id="cancel-file-btn">Atšaukti</button>
+      </div>
     </div>
   </div>
+
+  <!-- Firebase JavaScript SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-database-compat.js"></script>
+  
+  <!-- Firebase UI -->
+  <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
+  
+  <!-- Firebase konfigūracija -->
+  <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
 
   <!-- JavaScript moduliai -->
   <script src="dataStore.js"></script>
