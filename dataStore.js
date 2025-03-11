@@ -21,17 +21,24 @@ const DataStore = {
    */
   async init() {
     try {
-      // Inicializuojame IndexedDB
-      await this.initDatabase();
+      // Bandome inicializuoti IndexedDB, bet jei nepavyksta - tęsiame
+      try {
+        await this.initDatabase();
+        console.log('IndexedDB initialized successfully');
+      } catch (dbError) {
+        console.warn('IndexedDB initialization failed, will use Firebase only:', dbError);
+        // Tęsiame net jei IndexedDB nepavyko - naudosime tik Firebase ir localStorage
+      }
       
-      // Užkrauname išsaugotus duomenis
-      this.loadData();
+      // Užkrauname išsaugotus lokalius duomenis (jei nėra prisijungusio vartotojo)
+      this.loadLocalData();
       
       console.log('Data Store initialized successfully');
       return true;
     } catch (error) {
       console.error('Failed to initialize data store:', error);
-      return false;
+      // Net jei yra klaida, grąžiname true, kad aplikacija galėtų veikti
+      return true;
     }
   },
   
@@ -40,28 +47,42 @@ const DataStore = {
    */
   initDatabase() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbConfig.name, this.dbConfig.version);
-      
-      request.onerror = (event) => {
-        console.error('Database error:', event.target.errorCode);
-        reject('Failed to open database');
-      };
-      
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
+      try {
+        const request = indexedDB.open(this.dbConfig.name, this.dbConfig.version);
         
-        // Sukuriame objektų saugyklą, jei jos dar nėra
-        if (!db.objectStoreNames.contains(this.dbConfig.store)) {
-          db.createObjectStore(this.dbConfig.store, { keyPath: 'id' });
-          console.log('Created object store:', this.dbConfig.store);
-        }
-      };
-      
-      request.onsuccess = (event) => {
-        this.db = event.target.result;
-        console.log('Database opened successfully');
-        resolve(this.db);
-      };
+        request.onerror = (event) => {
+          console.error('Database error:', event.target.errorCode);
+          reject('Failed to open database');
+        };
+        
+        request.onupgradeneeded = (event) => {
+          try {
+            const db = event.target.result;
+            
+            // Sukuriame objektų saugyklą, jei jos dar nėra
+            if (!db.objectStoreNames.contains(this.dbConfig.store)) {
+              db.createObjectStore(this.dbConfig.store, { keyPath: 'id' });
+              console.log('Created object store:', this.dbConfig.store);
+            }
+          } catch (error) {
+            console.error('Error during database upgrade:', error);
+          }
+        };
+        
+        request.onsuccess = (event) => {
+          try {
+            this.db = event.target.result;
+            console.log('Database opened successfully');
+            resolve(this.db);
+          } catch (error) {
+            console.error('Error in database success handler:', error);
+            reject(error);
+          }
+        };
+      } catch (error) {
+        console.error('Error setting up IndexedDB:', error);
+        reject(error);
+      }
     });
   },
   
@@ -103,25 +124,44 @@ const DataStore = {
       
       // Jei Firebase nepavyko, bandome užkrauti iš localStorage
       this.loadLocalData();
+      
+      // Atnaujiname UI
+      UI.renderVideos();
+      UI.updateCounters();
     }
+  },
+  
+  /**
+   * Suderinamumo metodas su senuoju kodu (tiesiog kviečia loadLocalData)
+   */
+  loadData() {
+    console.log('Legacy loadData() method called, using loadLocalData() instead');
+    this.loadLocalData();
   },
   
   /**
    * Užkrauna išsaugotus duomenis iš localStorage (atsarginis variantas)
    */
   loadLocalData() {
-    // Bandome užkrauti išsaugotus video
-    const videosData = localStorage.getItem('tangoVideos');
-    if (videosData) {
-      this.videos = JSON.parse(videosData);
-      console.log(`Loaded ${this.videos.length} videos from local storage`);
-    }
-    
-    // Bandome užkrauti užbaigtų video ID sąrašą
-    const completedData = localStorage.getItem('tangoCompletedIds');
-    if (completedData) {
-      this.completedIds = JSON.parse(completedData);
-      console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
+    try {
+      // Bandome užkrauti išsaugotus video
+      const videosData = localStorage.getItem('tangoVideos');
+      if (videosData) {
+        this.videos = JSON.parse(videosData);
+        console.log(`Loaded ${this.videos.length} videos from local storage`);
+      }
+      
+      // Bandome užkrauti užbaigtų video ID sąrašą
+      const completedData = localStorage.getItem('tangoCompletedIds');
+      if (completedData) {
+        this.completedIds = JSON.parse(completedData);
+        console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+      // Jei nepavyko užkrauti - inicializuojame tuščius masyvus
+      this.videos = [];
+      this.completedIds = [];
     }
   },
   
@@ -129,10 +169,14 @@ const DataStore = {
    * Išsaugo duomenis į Firebase ir localStorage
    */
   async saveData() {
-    // Išsaugome duomenis į localStorage kaip atsarginę kopiją
-    localStorage.setItem('tangoVideos', JSON.stringify(this.videos));
-    localStorage.setItem('tangoCompletedIds', JSON.stringify(this.completedIds));
-    console.log('Data saved to local storage');
+    try {
+      // Išsaugome duomenis į localStorage kaip atsarginę kopiją
+      localStorage.setItem('tangoVideos', JSON.stringify(this.videos));
+      localStorage.setItem('tangoCompletedIds', JSON.stringify(this.completedIds));
+      console.log('Data saved to local storage');
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
     
     // Jei turime prisijungusį vartotoją, išsaugome duomenis į Firebase
     if (this.userId) {
@@ -160,24 +204,33 @@ const DataStore = {
    */
   saveVideoFile(id, file) {
     return new Promise((resolve, reject) => {
+      // Jei IndexedDB nėra inicializuota, išsaugome tik duomenis
       if (!this.db) {
-        reject('Database not initialized');
+        console.warn('IndexedDB not available, skipping file storage');
+        resolve(true);
         return;
       }
       
-      const transaction = this.db.transaction([this.dbConfig.store], 'readwrite');
-      const store = transaction.objectStore(this.dbConfig.store);
-      const request = store.put({ id, file });
-      
-      request.onsuccess = () => {
-        console.log('Video file saved to database:', id);
+      try {
+        const transaction = this.db.transaction([this.dbConfig.store], 'readwrite');
+        const store = transaction.objectStore(this.dbConfig.store);
+        const request = store.put({ id, file });
+        
+        request.onsuccess = () => {
+          console.log('Video file saved to database:', id);
+          resolve(true);
+        };
+        
+        request.onerror = (e) => {
+          console.error('Error saving video file:', e);
+          // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
+          resolve(true);
+        };
+      } catch (error) {
+        console.error('Error in saveVideoFile:', error);
+        // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
         resolve(true);
-      };
-      
-      request.onerror = (e) => {
-        console.error('Error saving video file:', e);
-        reject(e);
-      };
+      }
     });
   },
   
@@ -188,31 +241,38 @@ const DataStore = {
    */
   getVideoFile(id) {
     return new Promise((resolve, reject) => {
+      // Jei IndexedDB nėra inicializuota, grąžiname null
       if (!this.db) {
-        reject('Database not initialized');
+        console.warn('IndexedDB not available, cannot retrieve file');
+        resolve(null);
         return;
       }
       
-      const transaction = this.db.transaction([this.dbConfig.store], 'readonly');
-      const store = transaction.objectStore(this.dbConfig.store);
-      const request = store.get(id);
-      
-      request.onsuccess = (event) => {
-        const result = event.target.result;
+      try {
+        const transaction = this.db.transaction([this.dbConfig.store], 'readonly');
+        const store = transaction.objectStore(this.dbConfig.store);
+        const request = store.get(id);
         
-        if (result && result.file) {
-          console.log('Video file retrieved from database:', id);
-          resolve(result.file);
-        } else {
-          console.log('Video file not found in database:', id);
+        request.onsuccess = (event) => {
+          const result = event.target.result;
+          
+          if (result && result.file) {
+            console.log('Video file retrieved from database:', id);
+            resolve(result.file);
+          } else {
+            console.log('Video file not found in database:', id);
+            resolve(null);
+          }
+        };
+        
+        request.onerror = (e) => {
+          console.error('Error getting video file:', e);
           resolve(null);
-        }
-      };
-      
-      request.onerror = (e) => {
-        console.error('Error getting video file:', e);
-        reject(e);
-      };
+        };
+      } catch (error) {
+        console.error('Error in getVideoFile:', error);
+        resolve(null);
+      }
     });
   },
   
@@ -281,13 +341,20 @@ const DataStore = {
       // Šaliname iš video sąrašo
       this.videos.splice(index, 1);
       
-      // Jei tai lokalus video, šaliname ir failą
-      if (video.type === 'local') {
+      // Jei tai lokalus video, bandome šalinti failą (jei IndexedDB veikia)
+      if (video.type === 'local' && this.db) {
         try {
           await this.deleteVideoFile(id);
         } catch (error) {
           console.error('Failed to delete video file:', error);
+          // Tęsiame net jei nepavyko ištrinti failo
         }
+      }
+      
+      // Jei video buvo užbaigtas, šaliname iš completedIds sąrašo
+      const completedIndex = this.completedIds.indexOf(id);
+      if (completedIndex !== -1) {
+        this.completedIds.splice(completedIndex, 1);
       }
       
       // Išsaugome duomenis
@@ -308,24 +375,33 @@ const DataStore = {
    */
   deleteVideoFile(id) {
     return new Promise((resolve, reject) => {
+      // Jei IndexedDB nėra inicializuota, tiesiog pranešame sėkmę
       if (!this.db) {
-        reject('Database not initialized');
+        console.warn('IndexedDB not available, cannot delete file');
+        resolve(true);
         return;
       }
       
-      const transaction = this.db.transaction([this.dbConfig.store], 'readwrite');
-      const store = transaction.objectStore(this.dbConfig.store);
-      const request = store.delete(id);
-      
-      request.onsuccess = () => {
-        console.log('Video file deleted from database:', id);
+      try {
+        const transaction = this.db.transaction([this.dbConfig.store], 'readwrite');
+        const store = transaction.objectStore(this.dbConfig.store);
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          console.log('Video file deleted from database:', id);
+          resolve(true);
+        };
+        
+        request.onerror = (e) => {
+          console.error('Error deleting video file:', e);
+          // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
+          resolve(true);
+        };
+      } catch (error) {
+        console.error('Error in deleteVideoFile:', error);
+        // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
         resolve(true);
-      };
-      
-      request.onerror = (e) => {
-        console.error('Error deleting video file:', e);
-        reject(e);
-      };
+      }
     });
   },
   
