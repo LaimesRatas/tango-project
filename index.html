@@ -6,7 +6,27 @@
   <title>Tango Video Progress Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <style>
+  <style>.privacy-links {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 12px;
+  color: #777;
+  position: fixed;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+}
+
+.privacy-links a {
+  color: #777;
+  text-decoration: none;
+  margin: 0 5px;
+}
+
+.privacy-links a:hover {
+  text-decoration: underline;
+  color: #4a6cfa;
+}<style>
     /* Autentifikacijos konteineris */
     #auth-container {
       max-width: 400px;
@@ -270,5 +290,8 @@
   <script src="auth.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
-</body>
+<div class="privacy-links">
+  <a href="privacy-policy.html" target="_blank">Privatumo politika</a> |
+  <a href="terms-of-service.html" target="_blank">Naudojimo sąlygos</a>
+</div></body>
 </html>
