@@ -28,10 +28,14 @@ const Auth = {
       this.registerWithEmail(email, password);
     });
     
-    // Pridedame atsijungimo mygtuko veikimą
-    document.getElementById('sign-out-btn').addEventListener('click', () => {
-      this.signOut();
-    });
+    // Pridedame atsijungimo mygtuko veikimą, bet paslepiame mygtuką
+    const signOutBtn = document.getElementById('sign-out-btn');
+    if (signOutBtn) {
+      signOutBtn.style.display = 'none'; // Paslepiame atsijungimo mygtuką
+      signOutBtn.addEventListener('click', () => {
+        this.signOut();
+      });
+    }
     
     // Klausomės autentifikacijos būsenos
     firebase.auth().onAuthStateChanged(user => {
@@ -153,6 +157,9 @@ const Auth = {
       // Rodome aplikaciją, slepiame autentifikaciją
       document.getElementById('auth-container').style.display = 'none';
       document.getElementById('app-container').style.display = 'block';
+      
+      // Parodome vartotojo profilį (pakeičiame "Space for future menu" į vartotojo ikonėlę)
+      UI.displayUserProfile();
       
       // Patikriname, ar reikalinga migruoti duomenis
       this.migrateLocalDataToFirebase(user.uid).then(() => {
