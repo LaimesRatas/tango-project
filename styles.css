@@ -4,9 +4,6 @@ body {
   margin: 0;
   padding: 0;
   background-color: #f0f5fb;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
 }
 
 /* Header and navigation */
@@ -79,17 +76,6 @@ body {
   justify-content: center;
   border-radius: 5px;
   font-size: 12px;
-}
-
-/* Vartotojo profilio stilius */
-.user-profile {
-  background: none;
-  color: #333;
-  padding: 5px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
 }
 
 /* Upload buttons */
@@ -370,24 +356,15 @@ body {
   display: none;
 }
 
-/* Pagrindinis konteineris, kad footer būtų visada matomas */
-#app-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-/* Footer stilius */
 .privacy-links {
   text-align: center;
-  margin: 20px 0 0 0;
-  padding: 10px 0;
+  margin: 20px 0;
   font-size: 12px;
   color: #777;
-  position: relative;
-  background-color: #ffffff;
-  z-index: 10;
+  position: fixed;
+  bottom: 10px;
+  left: 0;
+  right: 0;
 }
 
 .privacy-links a {
@@ -401,123 +378,21 @@ body {
   color: #4a6cfa;
 }
 
-/* Mobile responsive design */
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    padding: 10px;
-  }
-  
-  .nav-menu {
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
-  }
-  
-  .logo {
-    height: 40px;
-    margin-right: 0;
-    margin-bottom: 10px;
-  }
-  
-  .nav-item {
-    font-size: 20px;
-    margin: 5px;
-  }
-  
-  .counter-container {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-  }
-  
-  .counter {
-    margin: 0 10px;
-  }
-  
-  .future-menu, 
-  .user-profile {
-    margin: 10px auto;
-  }
-  
-  .upload-section {
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-  }
-  
-  .upload-button {
-    width: 90%;
-    margin: 5px 0;
-    padding: 10px;
-  }
-  
-  .video-card {
-    width: 100%;
-    max-width: 300px;
-    margin: 0 auto;
-  }
-  
-  .category-header {
-    font-size: 26px;
-    padding: 12px;
-  }
-  
-  .toggle-icon {
-    left: 15px;
-    font-size: 20px;
-  }
-  
-  .popup {
-    width: 90%;
-    padding: 20px;
-  }
+/* Vartotojo ikonėlė */
+.user-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #ff69b4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 15px;
 }
 
-/* Authentication container styles */
-#auth-container {
-  max-width: 400px;
-  margin: 50px auto;
-  background-color: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.auth-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.auth-header h2 {
-  font-family: 'Dancing Script', cursive;
-  font-size: 32px;
-  color: #ff69b4;
-}
-
-/* Fix for the footer covering issue */
-body {
-  position: relative;
-  min-height: 100vh;
-  padding-bottom: 50px; /* Space for the footer */
-}
-
-.video-container {
-  margin-bottom: 10px;
-}
-
-/* Improve video card responsiveness */
-@media (max-width: 480px) {
-  .meta-container {
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .video-title {
-    font-size: 16px;
-  }
-}
 /* Mobilių įrenginių stiliai */
 @media (max-width: 768px) {
   /* Header struktūra */
@@ -553,20 +428,6 @@ body {
     font-size: 18px;
   }
   
-  /* Vartotojo ikonėlė */
-  .user-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: #ff69b4;
-    margin-left: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-  }
-  
   /* Antra juosta */
   .upload-section {
     display: flex;
@@ -599,5 +460,22 @@ body {
   
   .counter-label {
     font-size: 12px;
+  }
+  
+  /* Popup stiliai mobiliajame įrenginyje */
+  .popup {
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .video-card {
+    width: 100%;
+  }
+  
+  /* Pataisome popup konteinerius */
+  .popup-container {
+    align-items: flex-start;
+    padding-top: 50px;
   }
 }
