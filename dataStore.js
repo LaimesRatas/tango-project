@@ -352,19 +352,28 @@ const DataStore = {
       console.error('Error saving to localStorage:', error);
     }
     
-    // Pridedame papildomą Firebase išsaugojimą net be prisijungimo
+    // Pritaikome saugumo taisykles: Bandome naudoti anoniminį autentifikavimą, jei nėra prisijungusio vartotojo
     try {
-      if (firebase.database) {
-        const tempRef = firebase.database().ref('temporary_videos');
-        await tempRef.set({
-          videos: this.videos,
-          completedIds: this.completedIds,
-          lastUpdated: new Date().toISOString()
-        });
-        console.log('Temporary data saved to Firebase');
+      if (!this.userId && firebase.auth) {
+        // Bandome gauti anoniminį prisijungimą
+        try {
+          const anonUser = await firebase.auth().signInAnonymously();
+          console.log('Anonymous authentication successful', anonUser.user.uid);
+        } catch (anonError) {
+          console.warn('Anonymous authentication failed, proceeding without it:', anonError);
+        }
       }
-    } catch (error) {
-      console.error('Error saving temporary data to Firebase:', error);
+      
+      // Įrašome duomenis į laikiną saugyklą
+      const tempRef = firebase.database().ref('temporary_videos');
+      await tempRef.set({
+        videos: this.videos,
+        completedIds: this.completedIds,
+        lastUpdated: new Date().toISOString()
+      });
+      console.log('Temporary data saved to Firebase');
+    } catch (tempError) {
+      console.error('Error saving temporary data to Firebase:', tempError);
     }
     
     // Jei turime prisijungusį vartotoją, išsaugome duomenis į Firebase
@@ -376,7 +385,7 @@ const DataStore = {
           completedIds: this.completedIds,
           lastUpdated: new Date().toISOString()
         });
-        console.log('Data saved to Firebase');
+        console.log('Data saved to Firebase for user:', this.userId);
       } catch (error) {
         console.error('Error saving data to Firebase:', error);
       }
