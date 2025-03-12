@@ -10,47 +10,103 @@ const Auth = {
    * Inicializuoja autentifikacijos sistemą
    */
   init() {
-    // Pridedame prisijungimo mygtukų klausytojus
-    document.getElementById('login-with-google').addEventListener('click', () => {
-      this.signInWithGoogle();
-    });
+    console.log('Initializing Auth module...');
     
-    document.getElementById('login-with-email').addEventListener('click', () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      this.signInWithEmail(email, password);
-    });
-    
-    // Pridedame registracijos mygtuko klausytoją
-    document.getElementById('register-with-email').addEventListener('click', () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      this.registerWithEmail(email, password);
-    });
-    
-    // Pridedame atsijungimo mygtuko veikimą, bet paslepiame mygtuką
-    const signOutBtn = document.getElementById('sign-out-btn');
-    if (signOutBtn) {
-      signOutBtn.style.display = 'none'; // Paslepiame atsijungimo mygtuką
-      signOutBtn.addEventListener('click', () => {
-        this.signOut();
-      });
-    }
-    
-    // Klausomės autentifikacijos būsenos
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        // Vartotojas prisijungęs
-        this.currentUser = user;
-        this.onUserSignedIn(user);
-      } else {
-        // Vartotojas neprisijungęs
-        this.currentUser = null;
-        this.onUserSignedOut();
+    try {
+      // Patikriname, ar Firebase yra inicializuotas
+      if (!firebase || !firebase.auth) {
+        console.error('Firebase Auth is not available. Check if Firebase SDK is properly loaded.');
+        this.showAuthError();
+        return;
       }
-    });
-    
-    console.log('Auth module initialized');
+      
+      // Pridedame prisijungimo mygtukų klausytojus
+      const googleLoginBtn = document.getElementById('login-with-google');
+      if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', () => {
+          this.signInWithGoogle();
+        });
+      }
+      
+      const emailLoginBtn = document.getElementById('login-with-email');
+      if (emailLoginBtn) {
+        emailLoginBtn.addEventListener('click', () => {
+          const emailInput = document.getElementById('email');
+          const passwordInput = document.getElementById('password');
+          
+          if (emailInput && passwordInput) {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            this.signInWithEmail(email, password);
+          } else {
+            alert('Klaida: negali rasti el. pašto arba slaptažodžio laukų');
+          }
+        });
+      }
+      
+      // Pridedame registracijos mygtuko klausytoją
+      const registerBtn = document.getElementById('register-with-email');
+      if (registerBtn) {
+        registerBtn.addEventListener('click', () => {
+          const emailInput = document.getElementById('email');
+          const passwordInput = document.getElementById('password');
+          
+          if (emailInput && passwordInput) {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            this.registerWithEmail(email, password);
+          } else {
+            alert('Klaida: negali rasti el. pašto arba slaptažodžio laukų');
+          }
+        });
+      }
+      
+      // Pridedame atsijungimo mygtuko veikimą
+      const signOutBtn = document.getElementById('sign-out-btn');
+      if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+          this.signOut();
+        });
+      }
+      
+      // Klausomės autentifikacijos būsenos
+      firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+          // Vartotojas prisijungęs
+          this.currentUser = user;
+          this.onUserSignedIn(user);
+        } else {
+          // Vartotojas neprisijungęs
+          this.currentUser = null;
+          this.onUserSignedOut();
+        }
+      });
+      
+      console.log('Auth module initialized successfully');
+    } catch (error) {
+      console.error('Error initializing Auth module:', error);
+      this.showAuthError();
+    }
+  },
+  
+  /**
+   * Parodo klaidos pranešimą, jei nepavyksta inicializuoti autentifikacijos
+   */
+  showAuthError() {
+    const authContainer = document.getElementById('auth-container');
+    if (authContainer) {
+      authContainer.innerHTML = `
+        <div class="auth-header">
+          <h2>Klaida inicializuojant autentifikaciją</h2>
+        </div>
+        <div style="text-align: center; color: red; margin: 20px 0;">
+          Nepavyko inicializuoti autentifikacijos sistemos. Patikrinkite interneto ryšį ir perkraukite puslapį.
+        </div>
+        <button onclick="location.reload()" style="display: block; margin: 0 auto; padding: 10px 20px; background-color: #4a6cfa; color: white; border: none; border-radius: 5px; cursor: pointer;">
+          Perkrauti puslapį
+        </button>
+      `;
+    }
   },
   
   /**
@@ -73,15 +129,20 @@ const Auth = {
    * Prisijungimas su Google
    */
   signInWithGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then((result) => {
-        console.log('Google sign in successful');
-      })
-      .catch((error) => {
-        console.error('Google sign in error:', error);
-        alert('Klaida prisijungiant su Google: ' + error.message);
-      });
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+          console.log('Google sign in successful');
+        })
+        .catch((error) => {
+          console.error('Google sign in error:', error);
+          alert('Klaida prisijungiant su Google: ' + error.message);
+        });
+    } catch (error) {
+      console.error('Error in Google sign in:', error);
+      alert('Klaida inicializuojant Google prisijungimą. Patikrinkite, ar leidžiami iššokantys langai (pop-ups).');
+    }
   },
   
   /**
@@ -99,7 +160,27 @@ const Auth = {
       })
       .catch((error) => {
         console.error('Email sign in error:', error);
-        alert('Klaida prisijungiant: ' + error.message);
+        
+        // Patobulintas klaidos pranešimas
+        let errorMessage = 'Klaida prisijungiant: ';
+        switch (error.code) {
+          case 'auth/invalid-email':
+            errorMessage += 'Neteisingas el. pašto formatas.';
+            break;
+          case 'auth/user-disabled':
+            errorMessage += 'Šis vartotojas yra užblokuotas.';
+            break;
+          case 'auth/user-not-found':
+            errorMessage += 'Vartotojas su tokiu el. paštu nerastas.';
+            break;
+          case 'auth/wrong-password':
+            errorMessage += 'Neteisingas slaptažodis.';
+            break;
+          default:
+            errorMessage += error.message || 'Nežinoma klaida.';
+        }
+        
+        alert(errorMessage);
       });
   },
   
@@ -141,7 +222,27 @@ const Auth = {
       })
       .catch((error) => {
         console.error('Registration error:', error);
-        alert('Klaida registruojantis: ' + error.message);
+        
+        // Patobulintas klaidos pranešimas
+        let errorMessage = 'Klaida registruojantis: ';
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage += 'Šis el. paštas jau naudojamas.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage += 'Neteisingas el. pašto formatas.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage += 'El. pašto/slaptažodžio autentifikacija nėra įjungta.';
+            break;
+          case 'auth/weak-password':
+            errorMessage += 'Slaptažodis per silpnas.';
+            break;
+          default:
+            errorMessage += error.message || 'Nežinoma klaida.';
+        }
+        
+        alert(errorMessage);
       });
   },
   
@@ -155,16 +256,18 @@ const Auth = {
     // Patikriname, ar el. paštas patvirtintas
     if (user.emailVerified || user.providerData[0].providerId === 'google.com') {
       // Rodome aplikaciją, slepiame autentifikaciją
-      document.getElementById('auth-container').style.display = 'none';
-      document.getElementById('app-container').style.display = 'block';
+      const authContainer = document.getElementById('auth-container');
+      const appContainer = document.getElementById('app-container');
       
-      // Parodome vartotojo profilį (pakeičiame "Space for future menu" į vartotojo ikonėlę)
-      UI.displayUserProfile();
+      if (authContainer) authContainer.style.display = 'none';
+      if (appContainer) appContainer.style.display = 'block';
       
       // Patikriname, ar reikalinga migruoti duomenis
       this.migrateLocalDataToFirebase(user.uid).then(() => {
         // Užkrauname vartotojo duomenis
-        DataStore.loadUserData(user.uid);
+        if (DataStore && typeof DataStore.loadUserData === 'function') {
+          DataStore.loadUserData(user.uid);
+        }
       });
     } else {
       // Jei el. paštas nepatvirtintas, rodome pranešimą
@@ -185,6 +288,12 @@ const Auth = {
     console.log('Checking if data migration is needed...');
     
     try {
+      // Patikriname, ar Firebase yra pasiekiamas
+      if (!firebase || !firebase.database) {
+        console.error('Firebase is not available for data migration');
+        return false;
+      }
+      
       // Patikriname, ar jau yra duomenų Firebase
       const userRef = firebase.database().ref('users/' + userId);
       const snapshot = await userRef.once('value');
@@ -206,7 +315,7 @@ const Auth = {
         const completedIds = completedData ? JSON.parse(completedData) : [];
         
         // Migruojame ir lokalius video failus, jei įmanoma
-        if (DataStore.db) {
+        if (DataStore && DataStore.db) {
           console.log('Bandoma migruoti lokalius vaizdo failus...');
           
           // Gauname visus video ID, kurie yra "local" tipo
@@ -218,14 +327,12 @@ const Auth = {
           const migratedVideos = videos.map(video => {
             // Tikriname ar visi būtini laukai yra
             return {
-              id: video.id,
+              id: video.id || 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
               title: video.title || 'Untitled Video',
               category: video.category || 'other',
               type: video.type || 'youtube',
-              youtubeId: video.youtubeId || null,
               progress: video.progress || 0,
-              createdAt: video.createdAt || new Date().toISOString(),
-              updatedAt: video.updatedAt || new Date().toISOString(),
+              dateAdded: video.dateAdded || video.createdAt || new Date().toISOString(),
               // Jei yra papildomų laukų, juos taip pat išsaugome
               ...video
             };
@@ -273,21 +380,30 @@ const Auth = {
     console.log('Vartotojas atsijungęs');
     
     // Rodome autentifikaciją, slepiame aplikaciją
-    document.getElementById('auth-container').style.display = 'block';
-    document.getElementById('app-container').style.display = 'none';
+    const authContainer = document.getElementById('auth-container');
+    const appContainer = document.getElementById('app-container');
+    
+    if (authContainer) authContainer.style.display = 'block';
+    if (appContainer) appContainer.style.display = 'none';
   },
   
   /**
    * Atsijungimas iš sistemos
    */
   signOut() {
-    firebase.auth().signOut()
-      .then(() => {
-        console.log('Sėkmingai atsijungta');
-      })
-      .catch(error => {
-        console.error('Klaida atsijungiant:', error);
-      });
+    if (firebase && firebase.auth) {
+      firebase.auth().signOut()
+        .then(() => {
+          console.log('Sėkmingai atsijungta');
+        })
+        .catch(error => {
+          console.error('Klaida atsijungiant:', error);
+        });
+    } else {
+      console.error('Firebase Auth is not available for sign out');
+      // Vis tiek pakeičiame vaizdą į neprisijungusį
+      this.onUserSignedOut();
+    }
   },
   
   /**
