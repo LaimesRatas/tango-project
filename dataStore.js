@@ -21,10 +21,16 @@ const DataStore = {
    */
   async init() {
     try {
+      console.log('Initializing Data Store...');
+      
       // Bandome inicializuoti IndexedDB, bet jei nepavyksta - tęsiame
       try {
-        await this.initDatabase();
-        console.log('IndexedDB initialized successfully');
+        if (window.indexedDB) {
+          await this.initDatabase();
+          console.log('IndexedDB initialized successfully');
+        } else {
+          console.warn('Browser does not support IndexedDB');
+        }
       } catch (dbError) {
         console.warn('IndexedDB initialization failed, will use Firebase only:', dbError);
         // Tęsiame net jei IndexedDB nepavyko - naudosime tik Firebase ir localStorage
@@ -48,11 +54,18 @@ const DataStore = {
   initDatabase() {
     return new Promise((resolve, reject) => {
       try {
+        // Patikrinkime, ar indexedDB yra pasiekiamas
+        if (!window.indexedDB) {
+          console.error('Your browser does not support IndexedDB');
+          reject('IndexedDB not supported');
+          return;
+        }
+        
         const request = indexedDB.open(this.dbConfig.name, this.dbConfig.version);
         
         request.onerror = (event) => {
-          console.error('Database error:', event.target.errorCode);
-          reject('Failed to open database');
+          console.error('Database error:', event.target.error);
+          reject('Failed to open database: ' + (event.target.error ? event.target.error.message : 'Unknown error'));
         };
         
         request.onupgradeneeded = (event) => {
@@ -79,6 +92,12 @@ const DataStore = {
         request.onsuccess = (event) => {
           try {
             this.db = event.target.result;
+            
+            // Pridedame klaidų gaudymo įvykį
+            this.db.onerror = (event) => {
+              console.error('Database error:', event.target.error);
+            };
+            
             console.log('Database opened successfully');
             resolve(this.db);
           } catch (error) {
@@ -98,17 +117,24 @@ const DataStore = {
    * @param {string} userId - Vartotojo ID
    */
   async loadUserData(userId) {
-    this.userId = userId;
-    console.log('Loading user data for ID:', userId);
-    
     try {
+      this.userId = userId;
+      console.log('Loading user data for ID:', userId);
+      
+      // Patikrinimas, ar Firebase yra pasiekiamas
+      if (!firebase || !firebase.database) {
+        console.error('Firebase is not available');
+        this.loadLocalData();
+        return;
+      }
+      
       // Gauname duomenis iš Firebase
       const userRef = firebase.database().ref('users/' + userId);
       const snapshot = await userRef.once('value');
       const userData = snapshot.val() || {};
       
       // Jei nėra vartotojo duomenų, bandome gauti laikinus
-      if (!userData.videos) {
+      if (!userData.videos || userData.videos.length === 0) {
         try {
           const tempRef = firebase.database().ref('temporary_videos');
           const tempSnapshot = await tempRef.once('value');
@@ -125,21 +151,19 @@ const DataStore = {
       }
       
       // Nustatome video ir completedIds
-      if (userData.videos) {
+      if (userData.videos && Array.isArray(userData.videos)) {
         // Įsitikiname, kad visi video turi reikalingus laukus
         this.videos = userData.videos.map(video => {
           if (!video) return null; // Ignoruojame null vertes
           
           // Tikriname ar visi būtini laukai yra
           return {
-            id: video.id,
+            id: video.id || 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
             title: video.title || 'Untitled Video',
             category: video.category || 'other',
             type: video.type || 'youtube',
-            youtubeId: video.youtubeId || null,
             progress: video.progress || 0,
-            createdAt: video.createdAt || new Date().toISOString(),
-            updatedAt: video.updatedAt || new Date().toISOString(),
+            dateAdded: video.dateAdded || video.createdAt || new Date().toISOString(),
             // Jei yra papildomų laukų, juos taip pat išsaugome
             ...video
           };
@@ -151,7 +175,7 @@ const DataStore = {
         console.log('No videos found in Firebase, starting with empty list');
       }
       
-      if (userData.completedIds) {
+      if (userData.completedIds && Array.isArray(userData.completedIds)) {
         this.completedIds = userData.completedIds;
         console.log(`Loaded ${this.completedIds.length} completed IDs from Firebase`);
       } else {
@@ -159,8 +183,12 @@ const DataStore = {
       }
       
       // Atnaujiname UI
-      UI.renderVideos();
-      UI.updateCounters();
+      if (UI && typeof UI.renderVideos === 'function') {
+        UI.renderVideos();
+      }
+      if (UI && typeof UI.updateCounters === 'function') {
+        UI.updateCounters();
+      }
     } catch (error) {
       console.error('Error loading user data from Firebase:', error);
       
@@ -168,8 +196,12 @@ const DataStore = {
       this.loadLocalData();
       
       // Atnaujiname UI
-      UI.renderVideos();
-      UI.updateCounters();
+      if (UI && typeof UI.renderVideos === 'function') {
+        UI.renderVideos();
+      }
+      if (UI && typeof UI.updateCounters === 'function') {
+        UI.updateCounters();
+      }
     }
   },
   
@@ -186,32 +218,37 @@ const DataStore = {
    */
   loadLocalData() {
     try {
+      console.log('Loading data from local storage...');
+      
       // Bandome užkrauti išsaugotus video
       const videosData = localStorage.getItem('tangoVideos');
       if (videosData) {
         try {
           const parsedVideos = JSON.parse(videosData);
           
-          // Įsitikiname, kad visi video turi reikalingus laukus
-          this.videos = parsedVideos.map(video => {
-            if (!video) return null; // Ignoruojame null vertes
+          if (Array.isArray(parsedVideos)) {
+            // Įsitikiname, kad visi video turi reikalingus laukus
+            this.videos = parsedVideos.map(video => {
+              if (!video) return null; // Ignoruojame null vertes
+              
+              // Tikriname ar visi būtini laukai yra
+              return {
+                id: video.id || 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                title: video.title || 'Untitled Video',
+                category: video.category || 'other',
+                type: video.type || 'youtube',
+                progress: video.progress || 0,
+                dateAdded: video.dateAdded || video.createdAt || new Date().toISOString(),
+                // Jei yra papildomų laukų, juos taip pat išsaugome
+                ...video
+              };
+            }).filter(video => video !== null); // Pašaliname null vertes
             
-            // Tikriname ar visi būtini laukai yra
-            return {
-              id: video.id,
-              title: video.title || 'Untitled Video',
-              category: video.category || 'other',
-              type: video.type || 'youtube',
-              youtubeId: video.youtubeId || null,
-              progress: video.progress || 0,
-              createdAt: video.createdAt || new Date().toISOString(),
-              updatedAt: video.updatedAt || new Date().toISOString(),
-              // Jei yra papildomų laukų, juos taip pat išsaugome
-              ...video
-            };
-          }).filter(video => video !== null); // Pašaliname null vertes
-          
-          console.log(`Loaded ${this.videos.length} videos from local storage`);
+            console.log(`Loaded ${this.videos.length} videos from local storage`);
+          } else {
+            console.error('Parsed videos is not an array');
+            this.videos = [];
+          }
         } catch (parseError) {
           console.error('Error parsing videos from localStorage:', parseError);
           this.videos = [];
@@ -224,8 +261,14 @@ const DataStore = {
       const completedData = localStorage.getItem('tangoCompletedIds');
       if (completedData) {
         try {
-          this.completedIds = JSON.parse(completedData);
-          console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
+          const parsed = JSON.parse(completedData);
+          if (Array.isArray(parsed)) {
+            this.completedIds = parsed;
+            console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
+          } else {
+            console.error('Parsed completedIds is not an array');
+            this.completedIds = [];
+          }
         } catch (parseError) {
           console.error('Error parsing completedIds from localStorage:', parseError);
           this.completedIds = [];
@@ -292,8 +335,7 @@ const DataStore = {
             type: oldVideo.type || (oldVideo.youtubeId ? 'youtube' : 'local'),
             youtubeId: oldVideo.youtubeId || null,
             progress: oldVideo.progress || 0,
-            createdAt: oldVideo.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            dateAdded: oldVideo.dateAdded || oldVideo.createdAt || new Date().toISOString(),
             migratedFrom: true
           };
         });
@@ -310,7 +352,7 @@ const DataStore = {
           await this.saveData();
           
           // Jei prisijungęs vartotojas, išsaugome ir į Firebase
-          if (this.userId) {
+          if (this.userId && firebase && firebase.database) {
             try {
               const userRef = firebase.database().ref('users/' + this.userId);
               await userRef.update({
@@ -352,32 +394,23 @@ const DataStore = {
       console.error('Error saving to localStorage:', error);
     }
     
-    // Pritaikome saugumo taisykles: Bandome naudoti anoniminį autentifikavimą, jei nėra prisijungusio vartotojo
+    // Pridedame papildomą Firebase išsaugojimą net be prisijungimo
     try {
-      if (!this.userId && firebase.auth) {
-        // Bandome gauti anoniminį prisijungimą
-        try {
-          const anonUser = await firebase.auth().signInAnonymously();
-          console.log('Anonymous authentication successful', anonUser.user.uid);
-        } catch (anonError) {
-          console.warn('Anonymous authentication failed, proceeding without it:', anonError);
-        }
+      if (firebase && firebase.database) {
+        const tempRef = firebase.database().ref('temporary_videos');
+        await tempRef.set({
+          videos: this.videos,
+          completedIds: this.completedIds,
+          lastUpdated: new Date().toISOString()
+        });
+        console.log('Temporary data saved to Firebase');
       }
-      
-      // Įrašome duomenis į laikiną saugyklą
-      const tempRef = firebase.database().ref('temporary_videos');
-      await tempRef.set({
-        videos: this.videos,
-        completedIds: this.completedIds,
-        lastUpdated: new Date().toISOString()
-      });
-      console.log('Temporary data saved to Firebase');
-    } catch (tempError) {
-      console.error('Error saving temporary data to Firebase:', tempError);
+    } catch (error) {
+      console.error('Error saving temporary data to Firebase:', error);
     }
     
     // Jei turime prisijungusį vartotoją, išsaugome duomenis į Firebase
-    if (this.userId) {
+    if (this.userId && firebase && firebase.database) {
       try {
         const userRef = firebase.database().ref('users/' + this.userId);
         await userRef.update({
@@ -385,12 +418,12 @@ const DataStore = {
           completedIds: this.completedIds,
           lastUpdated: new Date().toISOString()
         });
-        console.log('Data saved to Firebase for user:', this.userId);
+        console.log('Data saved to Firebase');
       } catch (error) {
         console.error('Error saving data to Firebase:', error);
       }
     } else {
-      console.log('Data not saved to Firebase: user not authenticated');
+      console.log('Data not saved to Firebase: user not authenticated or Firebase not available');
     }
   },
   
@@ -420,7 +453,7 @@ const DataStore = {
         };
         
         request.onerror = (e) => {
-          console.error('Error saving video file:', e);
+          console.error('Error saving video file:', e.target.error);
           // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
           resolve(true);
         };
@@ -464,7 +497,7 @@ const DataStore = {
         };
         
         request.onerror = (e) => {
-          console.error('Error getting video file:', e);
+          console.error('Error getting video file:', e.target.error);
           resolve(null);
         };
       } catch (error) {
@@ -479,14 +512,25 @@ const DataStore = {
    * @param {Object} video - Video objektas
    */
   addVideo(video) {
+    // Įsitikiname, kad video turi visus reikalingus laukus
+    const safeVideo = {
+      id: video.id || 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      title: video.title || 'Untitled Video',
+      category: video.category || 'other',
+      type: video.type || 'youtube',
+      progress: video.progress || 0,
+      dateAdded: video.dateAdded || new Date().toISOString(),
+      ...video
+    };
+    
     // Pridedame video į sąrašo pradžią
-    this.videos.unshift(video);
+    this.videos.unshift(safeVideo);
     
     // Išsaugome duomenis
     this.saveData();
     
-    console.log('Video added:', video.id);
-    return video;
+    console.log('Video added:', safeVideo.id);
+    return safeVideo;
   },
   
   /**
@@ -512,7 +556,11 @@ const DataStore = {
       }
       
       // Atnaujiname video
-      this.videos[index] = { ...this.videos[index], ...updates, updatedAt: new Date().toISOString() };
+      this.videos[index] = { 
+        ...this.videos[index], 
+        ...updates, 
+        updatedAt: new Date().toISOString() 
+      };
       
       // Išsaugome duomenis
       this.saveData();
@@ -591,7 +639,7 @@ const DataStore = {
         };
         
         request.onerror = (e) => {
-          console.error('Error deleting video file:', e);
+          console.error('Error deleting video file:', e.target.error);
           // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
           resolve(true);
         };
