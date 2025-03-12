@@ -361,10 +361,11 @@ body {
   margin: 20px 0;
   font-size: 12px;
   color: #777;
-  position: fixed;
-  bottom: 10px;
-  left: 0;
-  right: 0;
+  /* Remove the fixed positioning */
+  position: relative;
+  padding: 10px 0;
+  background-color: #fff;
+  width: 100%;
 }
 
 .privacy-links a {
