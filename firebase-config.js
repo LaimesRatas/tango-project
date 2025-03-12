@@ -3,7 +3,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDTeH8iFH2bVxspr-E4fgABOu1ZrVPrIgc",
   authDomain: "tangochallenge-5b793.firebaseapp.com",
   projectId: "tangochallenge-5b793",
-  storageBucket: "tangochallenge-5b793.appspot.com", // Pataisytas storage bucket
+  storageBucket: "tangochallenge-5b793.appspot.com",
   messagingSenderId: "124849282962",
   appId: "1:124849282962:web:5beecd57d9bf42c2932b4b",
   measurementId: "G-5H4YLH194H",
@@ -17,16 +17,11 @@ try {
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     console.log('Firebase initialized successfully');
-    
-    // Jei turime diagnostikos funkciją
-    if (window.logDiag) {
-      window.logDiag('Firebase inicializuota sėkmingai');
-    }
+  } else {
+    console.log('Firebase already initialized');
+  }
 } catch (error) {
   console.error('Error initializing Firebase:', error);
-  if (window.logDiag) {
-    window.logDiag('Klaida inicializuojant Firebase: ' + error.message);
-  }
   
   // Parodome klaidos pranešimą vartotojui
   document.addEventListener('DOMContentLoaded', () => {
@@ -55,24 +50,3 @@ try {
     document.body.appendChild(errorDiv);
   });
 }
-    
-    // Tiesiogiai testuojame duomenų bazės prisijungimą
-    try {
-      firebase.database().ref('.info/connected').on('value', function(snap) {
-        console.log('Firebase DB connection:', snap.val() ? 'connected' : 'disconnected');
-        if (window.logDiag) {
-          window.logDiag('Firebase DB prisijungimas: ' + (snap.val() ? 'prisijungta' : 'neprisijungta'));
-        }
-      });
-    } catch (dbError) {
-      console.error('Error connecting to Firebase database:', dbError);
-      if (window.logDiag) {
-        window.logDiag('Klaida prisijungiant prie duomenų bazės: ' + dbError.message);
-      }
-    }
-  } else {
-    console.log('Firebase already initialized');
-    if (window.logDiag) {
-      window.logDiag('Firebase jau inicializuota');
-    }
-  }
