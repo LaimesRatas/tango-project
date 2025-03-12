@@ -4,6 +4,9 @@ body {
   margin: 0;
   padding: 0;
   background-color: #f0f5fb;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 /* Header and navigation */
@@ -76,6 +79,17 @@ body {
   justify-content: center;
   border-radius: 5px;
   font-size: 12px;
+}
+
+/* Vartotojo profilio stilius */
+.user-profile {
+  background: none;
+  color: #333;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
 }
 
 /* Upload buttons */
@@ -355,3 +369,19 @@ body {
   margin-top: 5px;
   display: none;
 }
+
+/* Pagrindinis konteineris, kad footer būtų visada matomas */
+#app-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Footer stilius */
+.privacy-links {
+  text-align: center;
+  margin: 20px 0 0 0;
+  padding: 10px 0;
+  font-size: 12px;
+  color: #777;
