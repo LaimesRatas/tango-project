@@ -2,6 +2,48 @@
  * Autentifikacijos valdymo modulis
  * Atsakingas už vartotojų autentifikaciją ir sesijų valdymą
  */
+// Atnaujinkite onUserSignedIn metodą Auth.js faile
+onUserSignedIn(user) {
+  console.log('Prisijungęs vartotojas:', user.displayName || user.email);
+  
+  // Patikriname, ar el. paštas patvirtintas
+  if (user.emailVerified || user.providerData[0].providerId === 'google.com') {
+    // Rodome aplikaciją, slepiame autentifikaciją
+    const authContainer = document.getElementById('auth-container');
+    const appContainer = document.getElementById('app-container');
+    
+    if (authContainer) authContainer.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'block';
+    
+    // Atnaujinama vartotojo ikonėlė
+    this.updateUserIcon();
+    
+    // Patikriname, ar reikalinga migruoti duomenis
+    this.migrateLocalDataToFirebase(user.uid).then(() => {
+      // Užkrauname vartotojo duomenis
+      if (DataStore && typeof DataStore.loadUserData === 'function') {
+        DataStore.loadUserData(user.uid);
+      }
+    });
+  } else {
+    // ... (likusią kodo dalį palikite nepakeistą)
+  }
+},
+
+// Atnaujinkite onUserSignedOut metodą
+onUserSignedOut() {
+  console.log('Vartotojas atsijungęs');
+  
+  // Rodome autentifikaciją, slepiame aplikaciją
+  const authContainer = document.getElementById('auth-container');
+  const appContainer = document.getElementById('app-container');
+  
+  if (authContainer) authContainer.style.display = 'block';
+  if (appContainer) appContainer.style.display = 'none';
+  
+  // Atnaujinama vartotojo ikonėlė
+  this.updateUserIcon();
+}
 const Auth = {
   // Kintamieji
   currentUser: null,
