@@ -58,11 +58,18 @@ const DataStore = {
         request.onupgradeneeded = (event) => {
           try {
             const db = event.target.result;
+            const oldVersion = event.oldVersion;
             
             // Sukuriame objektų saugyklą, jei jos dar nėra
             if (!db.objectStoreNames.contains(this.dbConfig.store)) {
               db.createObjectStore(this.dbConfig.store, { keyPath: 'id' });
               console.log('Created object store:', this.dbConfig.store);
+            }
+            
+            // Migracija iš v1 į v2 (jei reikalinga)
+            if (oldVersion < 2) {
+              console.log('Migrating IndexedDB schema from version', oldVersion, 'to version 2');
+              // Čia galime pridėti papildomą migracijos logiką, jei reikia
             }
           } catch (error) {
             console.error('Error during database upgrade:', error);
@@ -102,7 +109,25 @@ const DataStore = {
       
       // Nustatome video ir completedIds
       if (userData.videos) {
-        this.videos = userData.videos;
+        // Įsitikiname, kad visi video turi reikalingus laukus
+        this.videos = userData.videos.map(video => {
+          if (!video) return null; // Ignoruojame null vertes
+          
+          // Tikriname ar visi būtini laukai yra
+          return {
+            id: video.id,
+            title: video.title || 'Untitled Video',
+            category: video.category || 'other',
+            type: video.type || 'youtube',
+            youtubeId: video.youtubeId || null,
+            progress: video.progress || 0,
+            createdAt: video.createdAt || new Date().toISOString(),
+            updatedAt: video.updatedAt || new Date().toISOString(),
+            // Jei yra papildomų laukų, juos taip pat išsaugome
+            ...video
+          };
+        }).filter(video => video !== null); // Pašaliname null vertes
+        
         console.log(`Loaded ${this.videos.length} videos from Firebase`);
       } else {
         this.videos = [];
@@ -147,21 +172,153 @@ const DataStore = {
       // Bandome užkrauti išsaugotus video
       const videosData = localStorage.getItem('tangoVideos');
       if (videosData) {
-        this.videos = JSON.parse(videosData);
-        console.log(`Loaded ${this.videos.length} videos from local storage`);
+        try {
+          const parsedVideos = JSON.parse(videosData);
+          
+          // Įsitikiname, kad visi video turi reikalingus laukus
+          this.videos = parsedVideos.map(video => {
+            if (!video) return null; // Ignoruojame null vertes
+            
+            // Tikriname ar visi būtini laukai yra
+            return {
+              id: video.id,
+              title: video.title || 'Untitled Video',
+              category: video.category || 'other',
+              type: video.type || 'youtube',
+              youtubeId: video.youtubeId || null,
+              progress: video.progress || 0,
+              createdAt: video.createdAt || new Date().toISOString(),
+              updatedAt: video.updatedAt || new Date().toISOString(),
+              // Jei yra papildomų laukų, juos taip pat išsaugome
+              ...video
+            };
+          }).filter(video => video !== null); // Pašaliname null vertes
+          
+          console.log(`Loaded ${this.videos.length} videos from local storage`);
+        } catch (parseError) {
+          console.error('Error parsing videos from localStorage:', parseError);
+          this.videos = [];
+        }
+      } else {
+        this.videos = [];
       }
       
       // Bandome užkrauti užbaigtų video ID sąrašą
       const completedData = localStorage.getItem('tangoCompletedIds');
       if (completedData) {
-        this.completedIds = JSON.parse(completedData);
-        console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
+        try {
+          this.completedIds = JSON.parse(completedData);
+          console.log(`Loaded ${this.completedIds.length} completed video IDs from local storage`);
+        } catch (parseError) {
+          console.error('Error parsing completedIds from localStorage:', parseError);
+          this.completedIds = [];
+        }
+      } else {
+        this.completedIds = [];
       }
     } catch (error) {
       console.error('Error loading from localStorage:', error);
       // Jei nepavyko užkrauti - inicializuojame tuščius masyvus
       this.videos = [];
       this.completedIds = [];
+    }
+  },
+  
+  /**
+   * Migruoja senus vaizdo įrašus į naują formatą
+   */
+  async migrateOldVideos() {
+    console.log('Starting video migration process');
+    
+    try {
+      // Bandome gauti senus vaizdo įrašų duomenis (iš senų localStorage raktų)
+      const oldKeys = [
+        'tangoVideos',      // Dabartinis raktas
+        'tangoVideoItems',  // Galimas senas raktas
+        'videos',           // Galimas senas raktas
+        'videoItems'        // Galimas senas raktas
+      ];
+      
+      let oldVideos = [];
+      let migrationNeeded = false;
+      
+      // Patikriname visus galimus senus raktus
+      for (const key of oldKeys) {
+        const data = localStorage.getItem(key);
+        if (data && key !== 'tangoVideos') { // Nemigruojame dabartinių duomenų
+          try {
+            const parsedData = JSON.parse(data);
+            if (Array.isArray(parsedData) && parsedData.length > 0) {
+              console.log(`Rasti seni vaizdo įrašai raktu '${key}'`);
+              oldVideos = [...oldVideos, ...parsedData];
+              migrationNeeded = true;
+            }
+          } catch (parseError) {
+            console.error(`Klaida nuskaitant senus duomenis iš rakto '${key}':`, parseError);
+          }
+        }
+      }
+      
+      // Jei reikia migruoti
+      if (migrationNeeded && oldVideos.length > 0) {
+        console.log(`Rasta ${oldVideos.length} senų vaizdo įrašų, atliekama migracija...`);
+        
+        // Transformuojame senus duomenis į naują formatą
+        const migratedVideos = oldVideos.map(oldVideo => {
+          // Generuojame ID, jei jo nėra
+          const id = oldVideo.id || ('v_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+          
+          return {
+            id: id,
+            title: oldVideo.title || oldVideo.name || 'Neįvardintas vaizdo įrašas',
+            category: oldVideo.category || 'other',
+            type: oldVideo.type || (oldVideo.youtubeId ? 'youtube' : 'local'),
+            youtubeId: oldVideo.youtubeId || null,
+            progress: oldVideo.progress || 0,
+            createdAt: oldVideo.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            migratedFrom: true
+          };
+        });
+        
+        // Pridedame migruotus vaizdo įrašus į esamus (jei jų nėra su tokiais pat ID)
+        const existingIds = this.videos.map(v => v.id);
+        const newVideos = migratedVideos.filter(v => !existingIds.includes(v.id));
+        
+        if (newVideos.length > 0) {
+          this.videos = [...newVideos, ...this.videos];
+          console.log(`Pridėta ${newVideos.length} naujų vaizdo įrašų iš senų duomenų`);
+          
+          // Išsaugome duomenis
+          await this.saveData();
+          
+          // Jei prisijungęs vartotojas, išsaugome ir į Firebase
+          if (this.userId) {
+            try {
+              const userRef = firebase.database().ref('users/' + this.userId);
+              await userRef.update({
+                videos: this.videos,
+                lastUpdated: new Date().toISOString(),
+                dataMigrated: true
+              });
+              console.log('Migruoti duomenys išsaugoti Firebase');
+            } catch (firebaseError) {
+              console.error('Klaida išsaugant migruotus duomenis į Firebase:', firebaseError);
+            }
+          }
+          
+          return true;
+        } else {
+          console.log('Visi seni vaizdo įrašai jau buvo migruoti');
+          return false;
+        }
+      } else {
+        console.log('Senų vaizdo įrašų nerasta, migracija nereikalinga');
+        return false;
+      }
+    } catch (error) {
+      console.error('Klaida migruojant senus vaizdo įrašus:', error);
+      return false;
     }
   },
   
@@ -314,7 +471,7 @@ const DataStore = {
       }
       
       // Atnaujiname video
-      this.videos[index] = { ...this.videos[index], ...updates };
+      this.videos[index] = { ...this.videos[index], ...updates, updatedAt: new Date().toISOString() };
       
       // Išsaugome duomenis
       this.saveData();
