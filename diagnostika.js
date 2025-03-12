@@ -1,168 +1,52 @@
-// diagnostika.js
-document.addEventListener('DOMContentLoaded', function() {
-  // Diagnostikos elementas
-  const diagDiv = document.createElement('div');
-  diagDiv.style.position = 'fixed';
-  diagDiv.style.bottom = '10px';
-  diagDiv.style.left = '10px';
-  diagDiv.style.right = '10px';
-  diagDiv.style.backgroundColor = 'rgba(0,0,0,0.8)';
-  diagDiv.style.color = 'white';
-  diagDiv.style.padding = '10px';
-  diagDiv.style.fontSize = '12px';
-  diagDiv.style.maxHeight = '150px';
-  diagDiv.style.overflow = 'auto';
-  diagDiv.style.zIndex = '9999';
-  diagDiv.id = 'diagnostics';
-  document.body.appendChild(diagDiv);
+// Firebase konfigūracija
+const firebaseConfig = {
+  apiKey: "AIzaSyDTeH8iFH2bVxspr-E4fgABOu1ZrVPrIgc",
+  authDomain: "tangochallenge-5b793.firebaseapp.com",
+  projectId: "tangochallenge-5b793",
+  storageBucket: "tangochallenge-5b793.appspot.com",
+  messagingSenderId: "124849282962",
+  appId: "1:124849282962:web:5beecd57d9bf42c2932b4b",
+  measurementId: "G-5H4YLH194H",
+  databaseURL: "https://tangochallenge-5b793-default-rtdb.europe-west1.firebasedatabase.app/"
+};
 
-  // Logavimo funkcija
-  window.logDiag = function(message) {
-    const diagDiv = document.getElementById('diagnostics');
-    if (diagDiv) {
-      diagDiv.innerHTML += `<div>${new Date().toISOString().substring(11, 19)}: ${message}</div>`;
-      diagDiv.scrollTop = diagDiv.scrollHeight;
-    }
-    console.log(message);
-  };
-
-  // Pradinis testavimas
-  logDiag(`Naršyklė: ${navigator.userAgent}`);
-  logDiag(`Laikas: ${new Date().toISOString()}`);
-  
-  // Firebase versijos tikrinimas
-  if (firebase && firebase.SDK_VERSION) {
-    logDiag(`Firebase SDK versija: ${firebase.SDK_VERSION}`);
+// Klaidų gaudymas Firebase inicializacijai
+try {
+  // Patikriname ar jau inicializuota
+  if (!firebase.apps.length) {
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    console.log('Firebase initialized successfully');
+  } else {
+    console.log('Firebase already initialized');
   }
-
-  // Įterpiame papildomą Google prisijungimo mygtuką tiesiogiai HTML
-  const altLoginBtn = document.createElement('button');
-  altLoginBtn.textContent = 'Bandyti kitą Google prisijungimą';
-  altLoginBtn.style.marginTop = '10px';
-  altLoginBtn.style.padding = '10px';
-  altLoginBtn.style.display = 'block';
-  altLoginBtn.style.width = '100%';
-  altLoginBtn.style.backgroundColor = '#4285F4';
-  altLoginBtn.style.color = 'white';
-  altLoginBtn.style.border = 'none';
-  altLoginBtn.style.borderRadius = '4px';
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
   
-  const authButtons = document.querySelector('.auth-buttons');
-  if (authButtons) {
-    authButtons.appendChild(altLoginBtn);
-  }
-  
-  // Pridedame naują prisijungimo funkciją
-  altLoginBtn.addEventListener('click', function() {
-    logDiag('Bandomas alternatyvus Google prisijungimas...');
+  // Parodome klaidos pranešimą vartotojui
+  document.addEventListener('DOMContentLoaded', () => {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.backgroundColor = '#f8d7da';
+    errorDiv.style.color = '#721c24';
+    errorDiv.style.padding = '15px';
+    errorDiv.style.margin = '20px';
+    errorDiv.style.borderRadius = '5px';
+    errorDiv.style.textAlign = 'center';
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '10px';
+    errorDiv.style.left = '10px';
+    errorDiv.style.right = '10px';
+    errorDiv.style.zIndex = '9999';
     
-    try {
-      // Tiesioginis Google prisijungimas
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.addScope('profile');
-      provider.addScope('email');
-      
-      // Nustatome custom parametrus
-      provider.setCustomParameters({
-        'prompt': 'select_account'
-      });
-      
-      // Visada naudojame popup, nepriklausomai nuo įrenginio
-      logDiag('Naudojamas popup metodas visiems įrenginiams');
-      
-      firebase.auth().signInWithPopup(provider)
-        .then(result => {
-          logDiag('Google prisijungimas sėkmingas (popup)');
-        })
-        .catch(error => {
-          logDiag(`Google prisijungimo klaida (popup): ${error.code} - ${error.message}`);
-          alert('Klaida prisijungiant su Google: ' + error.message);
-        });
-    } catch (error) {
-      logDiag(`Google prisijungimo inicializavimo klaida: ${error.message}`);
-      alert('Klaida inicializuojant Google prisijungimą: ' + error.message);
-    }
+    errorDiv.innerHTML = `
+      <h3>Klaida inicializuojant Firebase</h3>
+      <p>${error.message || 'Nežinoma klaida'}</p>
+      <p>Bandykite perkrauti puslapį arba patikrinkite interneto ryšį.</p>
+      <button onclick="location.reload()" style="padding:5px 15px; background-color:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer;">
+        Perkrauti puslapį
+      </button>
+    `;
+    
+    document.body.appendChild(errorDiv);
   });
-  
-  // Pakeičiame originalų Google mygtuką
-  const googleLoginBtn = document.getElementById('login-with-google');
-  if (googleLoginBtn) {
-    // Išsaugome originalią onclick funkciją
-    const originalClick = googleLoginBtn.onclick;
-    
-    googleLoginBtn.onclick = function(e) {
-      e.preventDefault();
-      logDiag('Paspaustas originalus Google mygtukas');
-      
-      // Mobiliuose įrenginiuose naudojame alternatyvų metodą
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        logDiag('Mobilusis įrenginys - bandomas tiesioginis popup');
-        
-        try {
-          const provider = new firebase.auth.GoogleAuthProvider();
-          
-          // Nustatome custom parametrus
-          provider.setCustomParameters({
-            'prompt': 'select_account'
-          });
-          
-          firebase.auth().signInWithPopup(provider)
-            .then(result => {
-              logDiag('Google prisijungimas sėkmingas (popup)');
-            })
-            .catch(error => {
-              logDiag(`Google prisijungimo klaida (popup): ${error.code} - ${error.message}`);
-              
-              // Jei popup nepavyksta, bandome redirect
-              logDiag('Bandomas redirect metodas...');
-              firebase.auth().signInWithRedirect(provider)
-                .catch(redirectError => {
-                  logDiag(`Redirect klaida: ${redirectError.message}`);
-                });
-            });
-        } catch (error) {
-          logDiag(`Google prisijungimo klaida: ${error.message}`);
-        }
-      } else {
-        // Kompiuteryje paliekame originalų veikimą
-        if (originalClick) originalClick.call(this, e);
-      }
-    };
-  }
-  
-  // Tikriname Firebase DB prisijungimą
-  setTimeout(function() {
-    try {
-      if (firebase && firebase.database) {
-        logDiag('Testuojamas DB prisijungimas...');
-        
-        firebase.database().ref('.info/connected').on('value', function(snap) {
-          if (snap.val() === true) {
-            logDiag('✓ Prisijungta prie Firebase DB');
-          } else {
-            logDiag('✗ Neprisijungta prie Firebase DB');
-          }
-        }, function(error) {
-          logDiag(`✗ DB prisijungimo klaida: ${error.code} - ${error.message}`);
-        });
-      }
-    } catch (e) {
-      logDiag(`✗ Firebase DB testavimo klaida: ${e.message}`);
-    }
-  }, 3000);
-  
-  // Tikriname redirect rezultatą
-  if (firebase && firebase.auth) {
-    firebase.auth().getRedirectResult()
-      .then(function(result) {
-        if (result.user) {
-          logDiag(`✓ Redirect rezultatas: prisijungta kaip ${result.user.email}`);
-        } else {
-          logDiag('ℹ️ Nėra redirect rezultato');
-        }
-      })
-      .catch(function(error) {
-        logDiag(`✗ Redirect klaida: ${error.code} - ${error.message}`);
-      });
-  }
-});
+}
