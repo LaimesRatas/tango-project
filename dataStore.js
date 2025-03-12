@@ -107,6 +107,23 @@ const DataStore = {
       const snapshot = await userRef.once('value');
       const userData = snapshot.val() || {};
       
+      // Jei nėra vartotojo duomenų, bandome gauti laikinus
+      if (!userData.videos) {
+        try {
+          const tempRef = firebase.database().ref('temporary_videos');
+          const tempSnapshot = await tempRef.once('value');
+          const tempData = tempSnapshot.val() || {};
+          
+          if (tempData.videos && tempData.videos.length > 0) {
+            userData.videos = tempData.videos;
+            userData.completedIds = tempData.completedIds || [];
+            console.log('Loaded temporary videos');
+          }
+        } catch (tempError) {
+          console.warn('Error loading temporary videos:', tempError);
+        }
+      }
+      
       // Nustatome video ir completedIds
       if (userData.videos) {
         // Įsitikiname, kad visi video turi reikalingus laukus
@@ -333,6 +350,21 @@ const DataStore = {
       console.log('Data saved to local storage');
     } catch (error) {
       console.error('Error saving to localStorage:', error);
+    }
+    
+    // Pridedame papildomą Firebase išsaugojimą net be prisijungimo
+    try {
+      if (firebase.database) {
+        const tempRef = firebase.database().ref('temporary_videos');
+        await tempRef.set({
+          videos: this.videos,
+          completedIds: this.completedIds,
+          lastUpdated: new Date().toISOString()
+        });
+        console.log('Temporary data saved to Firebase');
+      }
+    } catch (error) {
+      console.error('Error saving temporary data to Firebase:', error);
     }
     
     // Jei turime prisijungusį vartotoją, išsaugome duomenis į Firebase
