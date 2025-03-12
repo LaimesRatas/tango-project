@@ -6,206 +6,9 @@
   <title>Tango Video Progress Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* Autentifikacijos konteineris */
-    #auth-container {
-      max-width: 400px;
-      margin: 50px auto;
-      background-color: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .auth-header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    
-    .auth-header h2 {
-      font-family: 'Dancing Script', cursive;
-      font-size: 32px;
-      color: #ff69b4;
-    }
-    
-    .auth-form {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .auth-input {
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-    
-    .auth-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .auth-button {
-      padding: 12px;
-      border: none;
-      border-radius: 5px;
-      background-color: #4a6cfa;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    
-    .auth-button:hover {
-      background-color: #3a5bd8;
-    }
-    
-    .google-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      background-color: white;
-      color: #757575;
-      border: 1px solid #ddd;
-    }
-    
-    .google-button:hover {
-      background-color: #f1f1f1;
-    }
-    
-    .google-icon {
-      width: 18px;
-      height: 18px;
-    }
-    
-    .separator {
-      text-align: center;
-      margin: 10px 0;
-      color: #757575;
-      position: relative;
-    }
-    
-    .separator::before,
-    .separator::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      width: 40%;
-      height: 1px;
-      background-color: #ddd;
-    }
-    
-    .separator::before {
-      left: 0;
-    }
-    
-    .separator::after {
-      right: 0;
-    }
-    
-    .privacy-links {
-      text-align: center;
-      margin: 20px 0;
-      font-size: 12px;
-      color: #777;
-      position: relative;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 10px 0;
-      background-color: #fff;
-      z-index: 10;
-    }
-
-    .privacy-links a {
-      color: #777;
-      text-decoration: none;
-      margin: 0 5px;
-    }
-
-    .privacy-links a:hover {
-      text-decoration: underline;
-      color: #4a6cfa;
-    }
-    
-    /* Mobilios versijos pritaikymas */
-    @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        padding: 10px;
-      }
-      
-      .nav-menu {
-        margin-bottom: 15px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      
-      .nav-item {
-        font-size: 20px;
-        margin: 5px 10px;
-      }
-      
-      .counter-container {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      
-      .upload-section {
-        flex-direction: column;
-        align-items: center;
-      }
-      
-      .upload-button {
-        width: 80%;
-        margin: 5px 0;
-      }
-      
-      .video-card {
-        width: 100%;
-      }
-      
-      .user-profile {
-        margin: 10px auto;
-      }
-    }
-    
-    /* Pagrindinis konteineris, kad footer būtų visada matomas */
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      margin: 0;
-      padding: 0;
-    }
-    
-    #app-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    /* Vartotojo profilio stilius */
-    .user-profile {
-      background: none;
-      color: #333;
-      padding: 5px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 5px;
-    }
-  </style>
 </head>
-<body class="tango-body">
+<body>
+  <!-- Autentifikacijos konteineris -->
   <div id="auth-container">
     <div class="auth-header">
       <h2>Prisijungimas prie Tango Video Tracker</h2>
@@ -232,44 +35,35 @@
   <!-- Aplikacijos konteineris (bus rodomas tik prisijungus) -->
   <div id="app-container" style="display: none;">
     <!-- Header with navigation -->
-    <!-- Pakeiskite header sekciją index.html faile -->
-<div class="header">
-  <div class="nav-menu">
-    <img src="logotipas.png" alt="Tango Logo" class="logo">
-    <a class="nav-item nav-active">Mano video</a>
-    <a class="nav-item nav-inactive">Visi video</a>
-    <a class="nav-item nav-inactive">Iššūkis</a>
-  </div>
-  
-  <div class="user-icon" id="user-profile">
-    <!-- Čia bus vartotojo inicialai arba paveikslėlis -->
-  </div>
-</div>
-
-<!-- Pakeiskite antrą juostą upload-section -->
-<div class="upload-section">
-  <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube</button>
-  <button class="upload-button" id="file-upload-btn">Įkelti failą</button>
-  
-  <div class="counter-container">
-    <div class="counter">
-      <span class="counter-number" id="active-count">29</span>
-      <span class="counter-label">Procese</span>
+    <div class="header">
+      <div class="nav-menu">
+        <img src="logotipas.png" alt="Tango Logo" class="logo">
+        <a class="nav-item nav-active">Mano video</a>
+        <a class="nav-item nav-inactive">Visi video</a>
+        <a class="nav-item nav-inactive">Iššūkis</a>
+      </div>
+      
+      <div class="user-icon" id="user-profile">
+        <!-- Čia bus vartotojo inicialai arba paveikslėlis -->
+      </div>
     </div>
-    <div class="counter">
-      <span class="counter-number" id="completed-count">1</span>
-      <span class="counter-label">Užbaigta</span>
-    </div>
-  </div>
-</div>
     
     <!-- Upload buttons -->
     <div class="upload-section">
-      <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube nuorodą</button>
-      <button class="upload-button" id="file-upload-btn">Pridėti video failą</button>
-      <input type="file" id="video-file" accept="video/*">
-      <!-- Atsijungimo mygtukas paslepiamas per JS, o ne HTML, kad išvengtume galimų problemų, jei JS neužsikrautų -->
-      <button class="upload-button" id="sign-out-btn" style="display: none;">Atsijungti</button>
+      <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube</button>
+      <button class="upload-button" id="file-upload-btn">Įkelti failą</button>
+      
+      <div class="counter-container">
+        <div class="counter">
+          <span class="counter-number" id="active-count">0</span>
+          <span class="counter-label">Procese</span>
+        </div>
+        <div class="counter">
+          <span class="counter-number" id="completed-count">0</span>
+          <span class="counter-label">Užbaigta</span>
+        </div>
+      </div>
+      <input type="file" id="video-file" accept="video/*" style="display:none;">
     </div>
     
     <!-- Category sections -->
@@ -358,6 +152,12 @@
     </div>
   </div>
 
+  <!-- Footer su privatumo nuorodomis -->
+  <div class="privacy-links">
+    <a href="privacy-policy.html" target="_blank">Privatumo politika</a> |
+    <a href="terms-of-service.html" target="_blank">Naudojimo sąlygos</a>
+  </div>
+
   <!-- Firebase JavaScript SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth-compat.js"></script>
@@ -371,10 +171,6 @@
   <script src="auth.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
-  
-  <div class="privacy-links">
-    <a href="privacy-policy.html" target="_blank">Privatumo politika</a> |
-    <a href="terms-of-service.html" target="_blank">Naudojimo sąlygos</a>
-  </div>
-<script src="diagnostika.js"></script></body>
+  <script src="diagnostika.js"></script>
+</body>
 </html>
