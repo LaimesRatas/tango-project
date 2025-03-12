@@ -456,3 +456,6 @@ const Auth = {
     return this.currentUser ? this.currentUser.uid : null;
   }
 };
+this.updateUserIcon();
+  }
+};
