@@ -232,28 +232,36 @@
   <!-- Aplikacijos konteineris (bus rodomas tik prisijungus) -->
   <div id="app-container" style="display: none;">
     <!-- Header with navigation -->
-    <div class="header">
-      <div class="nav-menu">
-        <img src="logotipas.png" alt="Tango Logo" class="logo">
-        <a class="nav-item nav-active">Mano video</a>
-        <a class="nav-item nav-inactive">Visi video</a>
-        <a class="nav-item nav-inactive">Tango iššūkis</a>
-      </div>
-      
-      <div class="counter-container">
-        <div class="counter">
-          <span class="counter-number" id="active-count">0</span>
-          <span class="counter-label">Procese</span>
-        </div>
-        <div class="counter">
-          <span class="counter-number" id="completed-count">0</span>
-          <span class="counter-label">Užbaigta</span>
-        </div>
-        <div class="user-profile">
-          <!-- Čia bus vartotojo profilis įkeltas per JavaScript -->
-        </div>
-      </div>
+    <!-- Pakeiskite header sekciją index.html faile -->
+<div class="header">
+  <div class="nav-menu">
+    <img src="logotipas.png" alt="Tango Logo" class="logo">
+    <a class="nav-item nav-active">Mano video</a>
+    <a class="nav-item nav-inactive">Visi video</a>
+    <a class="nav-item nav-inactive">Iššūkis</a>
+  </div>
+  
+  <div class="user-icon" id="user-profile">
+    <!-- Čia bus vartotojo inicialai arba paveikslėlis -->
+  </div>
+</div>
+
+<!-- Pakeiskite antrą juostą upload-section -->
+<div class="upload-section">
+  <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube</button>
+  <button class="upload-button" id="file-upload-btn">Įkelti failą</button>
+  
+  <div class="counter-container">
+    <div class="counter">
+      <span class="counter-number" id="active-count">29</span>
+      <span class="counter-label">Procese</span>
     </div>
+    <div class="counter">
+      <span class="counter-number" id="completed-count">1</span>
+      <span class="counter-label">Užbaigta</span>
+    </div>
+  </div>
+</div>
     
     <!-- Upload buttons -->
     <div class="upload-section">
