@@ -21,16 +21,13 @@ const Auth = {
       }
       
       // Patikriname ar yra redirect rezultatas (svarbu mobiliuose įrenginiuose)
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        firebase.auth().getRedirectResult().then((result) => {
-          if (result.user) {
-            console.log('Redirect sign-in successful');
-          }
-        }).catch((error) => {
-          console.error('Redirect sign-in error:', error);
-          alert('Klaida prisijungiant po nukreipimo: ' + error.message);
-        });
-      }
+      firebase.auth().getRedirectResult().then((result) => {
+        if (result.user) {
+          console.log('Redirect sign-in successful');
+        }
+      }).catch((error) => {
+        console.error('Redirect sign-in error:', error);
+      });
       
       // Pridedame prisijungimo mygtukų klausytojus
       const googleLoginBtn = document.getElementById('login-with-google');
@@ -133,39 +130,24 @@ const Auth = {
   },
   
   /**
-   * Prisijungimas su Google
+   * Prisijungimas su Google - supaprastinta versija, kuri visada naudoja popup
    */
   signInWithGoogle() {
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
       
-      // Pridedame log prieš bandant prisijungti
-      console.log('Pradedamas Google prisijungimas...');
-      
-      // Mobiliajame įrenginyje naudojame redirect, o ne popup
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        console.log('Naudojamas redirect metodas mobiliajame įrenginyje');
-        firebase.auth().signInWithRedirect(provider)
-          .catch((error) => {
-            console.error('Google sign in redirect error:', error);
-            alert('Klaida nukreipiant į Google prisijungimą: ' + error.message);
-          });
-      } else {
-        console.log('Naudojamas popup metodas kompiuteryje');
-        firebase.auth().signInWithPopup(provider)
-          .then((result) => {
-            console.log('Google sign in successful');
-          })
-          .catch((error) => {
-            console.error('Google sign in error:', error);
-            alert('Klaida prisijungiant su Google: ' + error.message);
-          });
-      }
+      // Naudojame popup visiems įrenginiams (įskaitant mobiliuosius)
+      firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+          console.log('Google sign in successful');
+        })
+        .catch((error) => {
+          console.error('Google sign in error:', error);
+          alert('Klaida prisijungiant su Google: ' + error.message);
+        });
     } catch (error) {
       console.error('Error in Google sign in:', error);
-      alert('Klaida inicializuojant Google prisijungimą. Patikrinkite, ar leidžiami iššokantys langai (pop-ups).');
+      alert('Klaida inicializuojant Google prisijungimą: ' + error.message);
     }
   },
   
@@ -369,34 +351,6 @@ const Auth = {
       if (!firebase || !firebase.database) {
         console.error('Firebase is not available for data migration');
         return Promise.reject(new Error('Firebase duomenų bazė nepasiekiama'));
-      }
-      
-      // Bandome patikrinti prisijungimą prie Firebase duomenų bazės
-      try {
-        // Bandome pasiekti .info/connected mazgą, kad patikrintume prisijungimą
-        const connectedRef = firebase.database().ref('.info/connected');
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Timeout - Nepavyko prisijungti prie duomenų bazės per 10 sekundžių'));
-          }, 10000);
-          
-          connectedRef.once('value', (snap) => {
-            clearTimeout(timeout);
-            if (snap.val() === true) {
-              console.log('Sėkmingai prisijungta prie Firebase duomenų bazės prieš migraciją');
-              resolve();
-            } else {
-              reject(new Error('Nepavyko prisijungti prie Firebase duomenų bazės'));
-            }
-          }, (error) => {
-            clearTimeout(timeout);
-            reject(error);
-          });
-        });
-      } catch (connError) {
-        console.error('Klaida bandant patikrinti prisijungimą:', connError);
-        alert('KLAIDA: Nepavyko prisijungti prie Firebase duomenų bazės: ' + connError.message);
-        return Promise.reject(connError);
       }
       
       // Patikriname, ar jau yra duomenų Firebase
