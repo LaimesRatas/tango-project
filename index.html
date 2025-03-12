@@ -6,27 +6,98 @@
   <title>Tango Video Progress Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <style>.privacy-links {
-  text-align: center;
-  margin: 20px 0;
-  font-size: 12px;
-  color: #777;
-  position: fixed;
-  bottom: 10px;
-  left: 0;
-  right: 0;
-}
+  <style>
+    .privacy-links {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 12px;
+      color: #777;
+      position: relative;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 0;
+      background-color: #fff;
+      z-index: 10;
+    }
 
-.privacy-links a {
-  color: #777;
-  text-decoration: none;
-  margin: 0 5px;
-}
+    .privacy-links a {
+      color: #777;
+      text-decoration: none;
+      margin: 0 5px;
+    }
 
-.privacy-links a:hover {
-  text-decoration: underline;
-  color: #4a6cfa;
-}<style>
+    .privacy-links a:hover {
+      text-decoration: underline;
+      color: #4a6cfa;
+    }
+    
+    /* Mobilios versijos pritaikymas */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        padding: 10px;
+      }
+      
+      .nav-menu {
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      
+      .nav-item {
+        font-size: 20px;
+        margin: 5px 10px;
+      }
+      
+      .counter-container {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      
+      .upload-section {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .upload-button {
+        width: 80%;
+        margin: 5px 0;
+      }
+      
+      .video-card {
+        width: 100%;
+      }
+      
+      .user-profile {
+        margin: 10px auto;
+      }
+    }
+    
+    /* Pagrindinis konteineris, kad footer būtų visada matomas */
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    #app-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Vartotojo profilio stilius */
+    .user-profile {
+      background: none;
+      color: #333;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+    }
+    
     /* Autentifikacijos konteineris */
     #auth-container {
       max-width: 400px;
@@ -122,176 +193,3 @@
       height: 1px;
       background-color: #ddd;
     }
-    
-    .separator::before {
-      left: 0;
-    }
-    
-    .separator::after {
-      right: 0;
-    }
-  </style>
-</head>
-<body>
-  <!-- Autentifikacijos konteineris -->
-  <div id="auth-container">
-    <div class="auth-header">
-      <h2>Prisijungimas prie Tango Video Tracker</h2>
-    </div>
-    <div class="auth-form">
-      <div class="form-group">
-        <input type="email" id="email" placeholder="El. paštas" class="auth-input">
-      </div>
-      <div class="form-group">
-        <input type="password" id="password" placeholder="Slaptažodis" class="auth-input">
-      </div>
-      <div class="auth-buttons">
-        <button id="login-with-email" class="auth-button">Prisijungti</button>
-        <button id="register-with-email" class="auth-button">Registruotis</button>
-        <div class="separator">ARBA</div>
-        <button id="login-with-google" class="auth-button google-button">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="google-icon">
-          Prisijungti su Google
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Aplikacijos konteineris (bus rodomas tik prisijungus) -->
-  <div id="app-container" style="display: none;">
-    <!-- Header with navigation -->
-    <div class="header">
-      <div class="nav-menu">
-        <img src="logotipas.png" alt="Tango Logo" class="logo">
-        <a class="nav-item nav-active">Mano video</a>
-        <a class="nav-item nav-inactive">Visi video</a>
-        <a class="nav-item nav-inactive">Tango iššūkis</a>
-      </div>
-      
-      <div class="counter-container">
-        <div class="counter">
-          <span class="counter-number" id="active-count">0</span>
-          <span class="counter-label">Procese</span>
-        </div>
-        <div class="counter">
-          <span class="counter-number" id="completed-count">0</span>
-          <span class="counter-label">Užbaigta</span>
-        </div>
-        <div class="future-menu">
-          Space for future menu
-        </div>
-      </div>
-    </div>
-    
-    <!-- Upload buttons -->
-    <div class="upload-section">
-      <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube nuorodą</button>
-      <button class="upload-button" id="file-upload-btn">Pridėti video failą</button>
-      <input type="file" id="video-file" accept="video/*">
-      <button class="upload-button" id="sign-out-btn">Atsijungti</button>
-    </div>
-    
-    <!-- Category sections -->
-    <div class="category-section tango">
-      <h2 class="category-header" data-category="tango"><span class="toggle-icon">+</span>Tango</h2>
-      <div class="video-container" id="tango-videos"></div>
-    </div>
-    
-    <div class="category-section milonga">
-      <h2 class="category-header" data-category="milonga"><span class="toggle-icon">+</span>Milonga</h2>
-      <div class="video-container" id="milonga-videos"></div>
-    </div>
-    
-    <div class="category-section vals">
-      <h2 class="category-header" data-category="vals"><span class="toggle-icon">+</span>Vals</h2>
-      <div class="video-container" id="vals-videos"></div>
-    </div>
-    
-    <div class="category-section milonguero">
-      <h2 class="category-header" data-category="milonguero"><span class="toggle-icon">+</span>Milonguero style</h2>
-      <div class="video-container" id="milonguero-videos"></div>
-    </div>
-    
-    <div class="category-section nuevo">
-      <h2 class="category-header" data-category="nuevo"><span class="toggle-icon">+</span>Nuevo style</h2>
-      <div class="video-container" id="nuevo-videos"></div>
-    </div>
-    
-    <div class="category-section embellishments">
-      <h2 class="category-header" data-category="embellishments"><span class="toggle-icon">+</span>Embellishments</h2>
-      <div class="video-container" id="embellishments-videos"></div>
-    </div>
-    
-    <div class="category-section other">
-      <h2 class="category-header" data-category="other"><span class="toggle-icon">+</span>Other</h2>
-      <div class="video-container" id="other-videos"></div>
-    </div>
-    
-    <!-- Completed videos section -->
-    <div class="category-section tango">
-      <h2 class="category-header" data-category="completed"><span class="toggle-icon">+</span>Užbaigtos pamokos</h2>
-      <div class="video-container" id="completed-videos"></div>
-    </div>
-
-    <!-- Popup for YouTube upload -->
-    <div class="popup-container" id="youtube-popup">
-      <div class="popup">
-        <h3>Įkelti YouTube video</h3>
-        <input type="text" id="youtube-url" placeholder="YouTube nuoroda">
-        <input type="text" id="youtube-title" placeholder="Video pavadinimas">
-        <select id="youtube-category">
-          <option value="tango">Tango</option>
-          <option value="milonga">Milonga</option>
-          <option value="vals">Vals</option>
-          <option value="milonguero">Milonguero style</option>
-          <option value="nuevo">Nuevo style</option>
-          <option value="embellishments">Embellishments</option>
-          <option value="other">Other</option>
-        </select>
-        <button id="add-youtube-btn">Pridėti</button>
-        <button id="cancel-youtube-btn">Atšaukti</button>
-      </div>
-    </div>
-    
-    <!-- Popup for local file upload -->
-    <div class="popup-container" id="file-popup">
-      <div class="popup">
-        <h3>Įkelti video failą</h3>
-        <input type="text" id="file-title" placeholder="Video pavadinimas">
-        <select id="file-category">
-          <option value="tango">Tango</option>
-          <option value="milonga">Milonga</option>
-          <option value="vals">Vals</option>
-          <option value="milonguero">Milonguero style</option>
-          <option value="nuevo">Nuevo style</option>
-          <option value="embellishments">Embellishments</option>
-          <option value="other">Other</option>
-        </select>
-        <div id="file-size-limit" class="file-size-limit">Failo dydis neturi viršyti 500MB</div>
-        <div id="upload-progress" class="upload-progress">
-          <div id="upload-progress-bar" class="upload-progress-bar"></div>
-        </div>
-        <button id="add-file-btn">Pridėti</button>
-        <button id="cancel-file-btn">Atšaukti</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Firebase JavaScript SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-database-compat.js"></script>
-  
-  <!-- Firebase konfigūracija -->
-  <script src="firebase-config.js"></script>
-
-  <!-- JavaScript moduliai -->
-  <script src="dataStore.js"></script>
-  <script src="auth.js"></script>
-  <script src="ui.js"></script>
-  <script src="app.js"></script>
-<div class="privacy-links">
-  <a href="privacy-policy.html" target="_blank">Privatumo politika</a> |
-  <a href="terms-of-service.html" target="_blank">Naudojimo sąlygos</a>
-</div></body>
-</html>
