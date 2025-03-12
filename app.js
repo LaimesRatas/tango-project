@@ -10,17 +10,17 @@ const App = {
     try {
       console.log('Initializing Tango Video Tracker...');
       
-      // Pridedame viewport meta tag jei jo nėra (mobiliam pritaikymui)
-      this.ensureViewportMeta();
+      // Pridedame CSS stilius autentifikacijos konteineriui
+      this.addAuthStyles();
       
-      // Inicializuojame duomenų saugyklą
+      // Inicializuojame duomenų saugyklą pirmiausia
       await DataStore.init();
       
-      // Inicializuojame autentifikaciją
-      Auth.init();
-      
-      // Inicializuojame UI
+      // Tada inicializuojame UI
       UI.init();
+      
+      // Galiausiai inicializuojame autentifikaciją
+      Auth.init();
       
       // Po inicializacijos bandome migruoti senus duomenis
       try {
@@ -30,18 +30,6 @@ const App = {
         // Tęsiame net jei migracija nepavyko
       }
       
-      // Pridedame klausiklį, kuris išvalo Firebase klaidas, kad leistų bandyti dar kartą
-      window.addEventListener('error', (e) => {
-        if (e.message && (
-            e.message.includes('Firebase') || 
-            e.message.includes('permission_denied') || 
-            e.message.includes('database'))) {
-          console.log('Handling Firebase error:', e.message);
-          // Bandome atkurti prisijungimą prie duomenų bazės
-          this.recoverFirebaseConnection();
-        }
-      });
-      
       console.log('Tango Video Tracker initialized successfully');
     } catch (error) {
       console.error('Failed to initialize application:', error);
@@ -50,41 +38,44 @@ const App = {
   },
   
   /**
-   * Užtikrina, kad viewport meta tag egzistuoja
+   * Prideda CSS stilius autentifikacijos konteineriui
    */
-  ensureViewportMeta() {
-    if (!document.querySelector('meta[name="viewport"]')) {
-      const meta = document.createElement('meta');
-      meta.name = 'viewport';
-      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-      document.head.appendChild(meta);
-    }
-  },
-  
-  /**
-   * Atkuria prisijungimą prie Firebase duomenų bazės
-   */
-  recoverFirebaseConnection() {
-    try {
-      // Bandome laikinai prisijungti anonimiškai
-      if (firebase.auth) {
-        firebase.auth().signInAnonymously()
-          .then(() => {
-            console.log("Anonymous auth successful, trying to reconnect to database");
-            // Bandome iš naujo prisijungti prie duomenų bazės
-            firebase.database().goOnline();
-          })
-          .catch((error) => {
-            console.error("Anonymous auth failed:", error);
-          });
+  addAuthStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Autentifikacijos konteineris */
+      #auth-container {
+        max-width: 600px;
+        margin: 50px auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
       }
-    } catch (error) {
-      console.error("Recovery attempt failed:", error);
-    }
+      
+      .auth-header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      
+      .auth-header h2 {
+        font-family: 'Dancing Script', cursive;
+        font-size: 32px;
+        color: #ff69b4;
+      }
+    `;
+    document.head.appendChild(style);
   }
 };
 
 // Paleidžiame aplikaciją, kai puslapis užsikrauna
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM fully loaded, initializing app...');
   App.init();
 });
+
+// Papildomas eventų klausytojas, jei DOMContentLoaded jau įvykęs
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  console.log('Document already loaded, initializing app...');
+  setTimeout(() => App.init(), 100);
+}
