@@ -13,7 +13,153 @@ const UI = {
     // Nustatome event listener'ius
     this.setupEventListeners();
     
+    // Nustatome mobilios versijos pritaikymą
+    this.setupMobileResponsiveness();
+    
+    // Rodome vartotojo profilį
+    this.displayUserProfile();
+    
     console.log('UI initialized');
+  },
+  
+  /**
+   * Nustato pritaikymą mobiliems įrenginiams
+   */
+  setupMobileResponsiveness() {
+    // Pridedame viewport meta tag jei jo nėra
+    if (!document.querySelector('meta[name="viewport"]')) {
+      const meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0';
+      document.head.appendChild(meta);
+    }
+    
+    // Pridedame stilius mobiliems įrenginiams
+    const style = document.createElement('style');
+    style.textContent = `
+      @media (max-width: 768px) {
+        .header {
+          flex-direction: column;
+          padding: 10px;
+        }
+        
+        .nav-menu {
+          margin-bottom: 15px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        
+        .nav-item {
+          font-size: 20px;
+          margin: 5px 10px;
+        }
+        
+        .counter-container {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        
+        .upload-section {
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        .upload-button {
+          width: 80%;
+          margin: 5px 0;
+        }
+        
+        .video-card {
+          width: 100%;
+        }
+      }
+      
+      /* Stiliaus pataisymas, kad footer būtų visada matomas */
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      
+      #app-container {
+        flex: 1;
+        padding-bottom: 60px; /* Daugiau vietos footeriui */
+      }
+      
+      .privacy-links {
+        position: relative !important;
+        bottom: auto !important;
+        padding: 10px 0;
+        margin-top: 20px;
+      }
+    `;
+    
+    document.head.appendChild(style);
+  },
+  
+  /**
+   * Rodo prisijungusio vartotojo profilį
+   */
+  displayUserProfile() {
+    const user = firebase.auth().currentUser;
+    const futureMenuDiv = document.querySelector('.future-menu');
+    
+    if (user && futureMenuDiv) {
+      // Pakeičiame "Space for future menu" į vartotojo profilį
+      futureMenuDiv.innerHTML = '';
+      futureMenuDiv.className = 'user-profile';
+      
+      // Stilius vartotojo profiliui
+      futureMenuDiv.style.display = 'flex';
+      futureMenuDiv.style.alignItems = 'center';
+      futureMenuDiv.style.justifyContent = 'center';
+      futureMenuDiv.style.background = 'none';
+      futureMenuDiv.style.height = 'auto';
+      
+      if (user.photoURL) {
+        // Jei yra profilio nuotrauka, rodome ją
+        const img = document.createElement('img');
+        img.src = user.photoURL;
+        img.alt = 'User Profile';
+        img.style.width = '40px';
+        img.style.height = '40px';
+        img.style.borderRadius = '50%';
+        futureMenuDiv.appendChild(img);
+      } else {
+        // Jei nėra nuotraukos, rodome inicialus
+        const initials = document.createElement('div');
+        const displayName = user.displayName || user.email || 'User';
+        initials.textContent = displayName.charAt(0).toUpperCase();
+        initials.style.width = '40px';
+        initials.style.height = '40px';
+        initials.style.borderRadius = '50%';
+        initials.style.backgroundColor = '#4a6cfa';
+        initials.style.color = 'white';
+        initials.style.display = 'flex';
+        initials.style.alignItems = 'center';
+        initials.style.justifyContent = 'center';
+        initials.style.fontWeight = 'bold';
+        initials.style.fontSize = '20px';
+        futureMenuDiv.appendChild(initials);
+      }
+      
+      // Pridedame vartotojo vardą, jei yra
+      if (user.displayName) {
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = user.displayName;
+        nameSpan.style.marginLeft = '10px';
+        nameSpan.style.color = '#333';
+        nameSpan.style.fontSize = '14px';
+        
+        // Mobiliuose įrenginiuose slepiame vardą
+        const mediaQuery = window.matchMedia('(max-width: 768px)');
+        if (mediaQuery.matches) {
+          nameSpan.style.display = 'none';
+        }
+        
+        futureMenuDiv.appendChild(nameSpan);
+      }
+    }
   },
   
   /**
@@ -62,6 +208,17 @@ const UI = {
       this.selectedFile = null;
     });
     
+    // Pašalinamas atsijungimo mygtuko event listener, nes mygtukas bus pasleptas
+    // document.getElementById('sign-out-btn').addEventListener('click', () => {
+    //   Auth.signOut();
+    // });
+    
+    // Slepiame atsijungimo mygtuką
+    const signOutBtn = document.getElementById('sign-out-btn');
+    if (signOutBtn) {
+      signOutBtn.style.display = 'none';
+    }
+    
     console.log('Event listeners set up');
   },
   
@@ -79,6 +236,9 @@ const UI = {
       container.classList.add('active');
       icon.textContent = '-';
     }
+    
+    // Užtikriname, kad footer neužsidengtu
+    document.body.style.paddingBottom = '60px';
   },
   
   /**
