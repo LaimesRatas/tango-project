@@ -2,48 +2,6 @@
  * Autentifikacijos valdymo modulis
  * Atsakingas už vartotojų autentifikaciją ir sesijų valdymą
  */
-// Atnaujinkite onUserSignedIn metodą Auth.js faile
-onUserSignedIn(user) {
-  console.log('Prisijungęs vartotojas:', user.displayName || user.email);
-  
-  // Patikriname, ar el. paštas patvirtintas
-  if (user.emailVerified || user.providerData[0].providerId === 'google.com') {
-    // Rodome aplikaciją, slepiame autentifikaciją
-    const authContainer = document.getElementById('auth-container');
-    const appContainer = document.getElementById('app-container');
-    
-    if (authContainer) authContainer.style.display = 'none';
-    if (appContainer) appContainer.style.display = 'block';
-    
-    // Atnaujinama vartotojo ikonėlė
-    this.updateUserIcon();
-    
-    // Patikriname, ar reikalinga migruoti duomenis
-    this.migrateLocalDataToFirebase(user.uid).then(() => {
-      // Užkrauname vartotojo duomenis
-      if (DataStore && typeof DataStore.loadUserData === 'function') {
-        DataStore.loadUserData(user.uid);
-      }
-    });
-  } else {
-    // ... (likusią kodo dalį palikite nepakeistą)
-  }
-},
-
-// Atnaujinkite onUserSignedOut metodą
-onUserSignedOut() {
-  console.log('Vartotojas atsijungęs');
-  
-  // Rodome autentifikaciją, slepiame aplikaciją
-  const authContainer = document.getElementById('auth-container');
-  const appContainer = document.getElementById('app-container');
-  
-  if (authContainer) authContainer.style.display = 'block';
-  if (appContainer) appContainer.style.display = 'none';
-  
-  // Atnaujinama vartotojo ikonėlė
-  this.updateUserIcon();
-}
 const Auth = {
   // Kintamieji
   currentUser: null,
@@ -103,14 +61,6 @@ const Auth = {
         });
       }
       
-      // Pridedame atsijungimo mygtuko veikimą
-      const signOutBtn = document.getElementById('sign-out-btn');
-      if (signOutBtn) {
-        signOutBtn.addEventListener('click', () => {
-          this.signOut();
-        });
-      }
-      
       // Klausomės autentifikacijos būsenos
       firebase.auth().onAuthStateChanged(user => {
         if (user) {
@@ -123,6 +73,9 @@ const Auth = {
           this.onUserSignedOut();
         }
       });
+      
+      // Inicializuojame vartotojo ikonėlę
+      this.updateUserIcon();
       
       console.log('Auth module initialized successfully');
     } catch (error) {
@@ -173,14 +126,20 @@ const Auth = {
   signInWithGoogle() {
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-          console.log('Google sign in successful');
-        })
-        .catch((error) => {
-          console.error('Google sign in error:', error);
-          alert('Klaida prisijungiant su Google: ' + error.message);
-        });
+      
+      // Mobiliajame įrenginyje naudojame redirect, o ne popup
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        firebase.auth().signInWithRedirect(provider);
+      } else {
+        firebase.auth().signInWithPopup(provider)
+          .then((result) => {
+            console.log('Google sign in successful');
+          })
+          .catch((error) => {
+            console.error('Google sign in error:', error);
+            alert('Klaida prisijungiant su Google: ' + error.message);
+          });
+      }
     } catch (error) {
       console.error('Error in Google sign in:', error);
       alert('Klaida inicializuojant Google prisijungimą. Patikrinkite, ar leidžiami iššokantys langai (pop-ups).');
@@ -289,6 +248,47 @@ const Auth = {
   },
   
   /**
+   * Atnaujina vartotojo ikonėlę
+   */
+  updateUserIcon() {
+    const userIcon = document.getElementById('user-profile');
+    
+    if (userIcon) {
+      if (this.currentUser) {
+        // Jei vartotojas turi nuotrauką
+        if (this.currentUser.photoURL) {
+          userIcon.innerHTML = `<img src="${this.currentUser.photoURL}" alt="Profile" style="width: 100%; height: 100%; border-radius: 50%;">`;
+        } else {
+          // Rodome vartotojo inicialus
+          const name = this.currentUser.displayName || this.currentUser.email || 'U';
+          const initials = name.charAt(0).toUpperCase();
+          userIcon.textContent = initials;
+        }
+        
+        // Pridedame atsijungimo funkciją
+        userIcon.onclick = () => {
+          if (confirm('Ar tikrai norite atsijungti?')) {
+            this.signOut();
+          }
+        };
+      } else {
+        // Rodome prisijungimo ikonėlę
+        userIcon.innerHTML = '<i style="font-size:18px">▶</i>';
+        userIcon.onclick = () => {
+          // Rodome prisijungimo formą
+          const authContainer = document.getElementById('auth-container');
+          const appContainer = document.getElementById('app-container');
+          
+          if (authContainer && appContainer) {
+            authContainer.style.display = 'block';
+            appContainer.style.display = 'none';
+          }
+        };
+      }
+    }
+  },
+  
+  /**
    * Autorizuoto vartotojo apdorojimas
    * @param {Object} user - Prisijungusio vartotojo objektas
    */
@@ -303,6 +303,9 @@ const Auth = {
       
       if (authContainer) authContainer.style.display = 'none';
       if (appContainer) appContainer.style.display = 'block';
+      
+      // Atnaujinama vartotojo ikonėlė
+      this.updateUserIcon();
       
       // Patikriname, ar reikalinga migruoti duomenis
       this.migrateLocalDataToFirebase(user.uid).then(() => {
@@ -427,6 +430,9 @@ const Auth = {
     
     if (authContainer) authContainer.style.display = 'block';
     if (appContainer) appContainer.style.display = 'none';
+    
+    // Atnaujinama vartotojo ikonėlė
+    this.updateUserIcon();
   },
   
   /**
@@ -454,8 +460,5 @@ const Auth = {
    */
   getCurrentUserId() {
     return this.currentUser ? this.currentUser.uid : null;
-  }
-};
-this.updateUserIcon();
   }
 };
