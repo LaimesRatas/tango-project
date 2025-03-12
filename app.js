@@ -22,6 +22,14 @@ const App = {
       // Pridedame CSS stilius autentifikacijos konteineriui
       this.addAuthStyles();
       
+      // Po inicializacijos bandome migruoti senus duomenis
+      try {
+        await DataStore.migrateOldVideos();
+      } catch (migrationError) {
+        console.warn('Nepavyko atlikti duomenų migracijos:', migrationError);
+        // Tęsiame net jei migracija nepavyko
+      }
+      
       console.log('Tango Video Tracker initialized successfully');
     } catch (error) {
       console.error('Failed to initialize application:', error);
