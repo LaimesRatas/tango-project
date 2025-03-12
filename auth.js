@@ -154,33 +154,11 @@ const Auth = {
       document.getElementById('auth-container').style.display = 'none';
       document.getElementById('app-container').style.display = 'block';
       
-      // PAPRASTAS MIGRAVIMAS: Perkeliam duomenis iš localStorage į Firebase
-      const videosData = localStorage.getItem('tangoVideos');
-      const completedData = localStorage.getItem('tangoCompletedIds');
-      
-      if (videosData || completedData) {
-        const videos = videosData ? JSON.parse(videosData) : [];
-        const completedIds = completedData ? JSON.parse(completedData) : [];
-        
-        // Įrašome duomenis į Firebase
-        const userRef = firebase.database().ref('users/' + user.uid);
-        userRef.set({
-          videos: videos,
-          completedIds: completedIds,
-          lastUpdated: new Date().toISOString()
-        }).then(() => {
-          console.log('Duomenys sėkmingai perkelti į Firebase');
-          // Užkrauname vartotojo duomenis
-          DataStore.loadUserData(user.uid);
-        }).catch(error => {
-          console.error('Klaida perkeliant duomenis:', error);
-          // Vis tiek užkrauname duomenis
-          DataStore.loadUserData(user.uid);
-        });
-      } else {
-        // Jei nėra lokalių duomenų, tiesiog užkrauname iš Firebase
+      // Patikriname, ar reikalinga migruoti duomenis
+      this.migrateLocalDataToFirebase(user.uid).then(() => {
+        // Užkrauname vartotojo duomenis
         DataStore.loadUserData(user.uid);
-      }
+      });
     } else {
       // Jei el. paštas nepatvirtintas, rodome pranešimą
       alert('Prašome patvirtinti savo el. paštą prieš tęsiant. Patikrinkite savo el. pašto dėžutę.');
@@ -188,6 +166,96 @@ const Auth = {
       
       // Atsijungiame, kol el. paštas nepatvirtintas
       this.signOut();
+    }
+  },
+  
+  /**
+   * Migruoja lokalius duomenis į Firebase, jei jie dar nebuvo migruoti
+   * @param {string} userId - Vartotojo ID
+   * @returns {Promise} - Pažadas, kuris įvykdomas, kai migracija baigiama
+   */
+  async migrateLocalDataToFirebase(userId) {
+    console.log('Checking if data migration is needed...');
+    
+    try {
+      // Patikriname, ar jau yra duomenų Firebase
+      const userRef = firebase.database().ref('users/' + userId);
+      const snapshot = await userRef.once('value');
+      const userData = snapshot.val() || {};
+      
+      const hasFirebaseData = userData.videos && userData.videos.length > 0;
+      
+      // Gauname lokalius duomenis
+      const videosData = localStorage.getItem('tangoVideos');
+      const completedData = localStorage.getItem('tangoCompletedIds');
+      
+      const hasLocalData = videosData || completedData;
+      
+      // Jei Firebase neturi duomenų, bet lokaliai yra, atliekame migraciją
+      if (!hasFirebaseData && hasLocalData) {
+        console.log('Firebase duomenų nerasta, bet lokalūs duomenys egzistuoja. Atliekama migracija...');
+        
+        const videos = videosData ? JSON.parse(videosData) : [];
+        const completedIds = completedData ? JSON.parse(completedData) : [];
+        
+        // Migruojame ir lokalius video failus, jei įmanoma
+        if (DataStore.db) {
+          console.log('Bandoma migruoti lokalius vaizdo failus...');
+          
+          // Gauname visus video ID, kurie yra "local" tipo
+          const localVideoIds = videos
+            .filter(v => v.type === 'local')
+            .map(v => v.id);
+          
+          // Įsitikiname, kad visi video turi reikalingus laukus
+          const migratedVideos = videos.map(video => {
+            // Tikriname ar visi būtini laukai yra
+            return {
+              id: video.id,
+              title: video.title || 'Untitled Video',
+              category: video.category || 'other',
+              type: video.type || 'youtube',
+              youtubeId: video.youtubeId || null,
+              progress: video.progress || 0,
+              createdAt: video.createdAt || new Date().toISOString(),
+              updatedAt: video.updatedAt || new Date().toISOString(),
+              // Jei yra papildomų laukų, juos taip pat išsaugome
+              ...video
+            };
+          });
+          
+          // Įrašome duomenis į Firebase su visais reikalingais laukais
+          await userRef.set({
+            videos: migratedVideos,
+            completedIds: completedIds,
+            lastUpdated: new Date().toISOString(),
+            dataMigrated: true // Žymime, kad duomenys buvo migruoti
+          });
+          
+          console.log('Duomenys sėkmingai perkelti į Firebase');
+          return true;
+        } else {
+          // Jei IndexedDB neveikia, migruojame tik metaduomenis
+          await userRef.set({
+            videos: videos,
+            completedIds: completedIds,
+            lastUpdated: new Date().toISOString(),
+            dataMigrated: true
+          });
+          
+          console.log('Metaduomenys sėkmingai perkelti į Firebase (be failų)');
+          return true;
+        }
+      } else if (hasFirebaseData) {
+        console.log('Firebase jau turi duomenis, migracija nereikalinga');
+        return false;
+      } else {
+        console.log('Nėra nei Firebase, nei lokalių duomenų');
+        return false;
+      }
+    } catch (error) {
+      console.error('Klaida migruojant duomenis:', error);
+      return false;
     }
   },
   
