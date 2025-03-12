@@ -518,3 +518,86 @@ body {
     font-size: 16px;
   }
 }
+/* Mobilių įrenginių stiliai */
+@media (max-width: 768px) {
+  /* Header struktūra */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    flex-wrap: nowrap;
+  }
+  
+  .logo {
+    height: 40px;
+    margin-right: 10px;
+  }
+  
+  .nav-menu {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-grow: 1;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .nav-menu::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+  
+  .nav-item {
+    font-size: 18px;
+  }
+  
+  /* Vartotojo ikonėlė */
+  .user-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #ff69b4;
+    margin-left: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+  }
+  
+  /* Antra juosta */
+  .upload-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 15px;
+  }
+  
+  .upload-button {
+    font-size: 12px;
+    padding: 8px 12px;
+    white-space: nowrap;
+    flex: 1;
+  }
+  
+  .counter-container {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .counter {
+    text-align: center;
+  }
+  
+  .counter-number {
+    font-size: 22px;
+  }
+  
+  .counter-label {
+    font-size: 12px;
+  }
+}
