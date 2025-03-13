@@ -57,9 +57,7 @@ body {
 }
 
 .counter-container {
-  display: flex;
-  gap: 30px;
-  align-items: center;
+  display: none; /* Paslepiame senąjį konteinerį */
 }
 
 .counter {
@@ -408,6 +406,37 @@ body {
   margin-left: 15px;
 }
 
+/* Naujas skaitliuko stilius */
+.achievement-counter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+
+.shield-icon {
+  width: 40px;
+  height: 40px;
+  position: relative;
+}
+
+.counter-bubble {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ff69b4;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
 /* Mobilių įrenginių stiliai */
 @media (max-width: 768px) {
   /* Header struktūra */
@@ -460,21 +489,15 @@ body {
     flex: 1;
   }
   
-  .counter-container {
-    display: flex;
-    gap: 10px;
+  .shield-icon {
+    width: 30px;
+    height: 30px;
   }
   
-  .counter {
-    text-align: center;
-  }
-  
-  .counter-number {
-    font-size: 20px;
-  }
-  
-  .counter-label {
-    font-size: 12px;
+  .counter-bubble {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
   }
   
   /* Popup stiliai mobiliajame įrenginyje */
