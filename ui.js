@@ -167,7 +167,19 @@ const UI = {
       const completedCount = DataStore.completedIds.length;
       
       // Atnaujinti naują skaitliuką su skydo ikona
-      const completedCountElement = document.getElementById('completed-count-new');
+      const newCompletedCountElement = document.getElementById('completed-count-new');
+      if (newCompletedCountElement) {
+        newCompletedCountElement.textContent = completedCount;
+      }
+      
+      // Atnaujinti senuosius skaitliukus (diagnostikos tikslais)
+      const activeCountElement = document.getElementById('active-count');
+      if (activeCountElement) {
+        const activeCount = DataStore.getActiveVideos().length;
+        activeCountElement.textContent = activeCount;
+      }
+      
+      const completedCountElement = document.getElementById('completed-count');
       if (completedCountElement) {
         completedCountElement.textContent = completedCount;
       }
