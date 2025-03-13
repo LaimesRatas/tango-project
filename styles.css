@@ -56,24 +56,9 @@ body {
   color: #777;
 }
 
+/* Counter styles (hidden) */
 .counter-container {
-  display: none; /* Paslepiame senąjį konteinerį */
-}
-
-.counter {
-  text-align: center;
-}
-
-.counter-number {
-  font-size: 24px;
-  font-weight: bold;
-  color: #ff69b4;
-  display: block;
-}
-
-.counter-label {
-  font-size: 12px;
-  color: #ff69b4;
+  display: none;
 }
 
 .future-menu {
@@ -406,7 +391,7 @@ body {
   margin-left: 15px;
 }
 
-/* Naujas skaitliuko stilius */
+/* Naujas skaitliuko stilius su skydo ikona */
 .achievement-counter {
   position: relative;
   display: flex;
