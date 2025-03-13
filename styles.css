@@ -440,7 +440,7 @@ body {
 @media (max-width: 768px) {
   /* Header struktūra */
   .header {
-    padding: 10px 15px;
+    padding: 10px 10px;
     flex-wrap: nowrap;
   }
   
