@@ -163,17 +163,16 @@ const UI = {
    */
   updateCounters() {
     try {
-      // Aktyvių video skaitliukas
-      const activeCount = DataStore.getActiveVideos().length;
-      const activeCountElement = document.getElementById('active-count');
-      if (activeCountElement) activeCountElement.textContent = activeCount;
-      
       // Užbaigtų video skaitliukas
       const completedCount = DataStore.completedIds.length;
-      const completedCountElement = document.getElementById('completed-count');
-      if (completedCountElement) completedCountElement.textContent = completedCount;
       
-      console.log('Counters updated: active =', activeCount, 'completed =', completedCount);
+      // Atnaujinti naują skaitliuką su skydo ikona
+      const completedCountElement = document.getElementById('completed-count-new');
+      if (completedCountElement) {
+        completedCountElement.textContent = completedCount;
+      }
+      
+      console.log('Counters updated: completed =', completedCount);
     } catch (error) {
       console.error('Error updating counters:', error);
     }
