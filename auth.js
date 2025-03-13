@@ -70,6 +70,14 @@ const Auth = {
         });
       }
       
+      // Pridedame atsijungimo mygtuko klausytoją (diagnostikos tikslais)
+      const signOutBtn = document.getElementById('sign-out-btn');
+      if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+          this.signOut();
+        });
+      }
+      
       // Klausomės autentifikacijos būsenos
       firebase.auth().onAuthStateChanged(user => {
         if (user) {
@@ -457,6 +465,8 @@ const Auth = {
       firebase.auth().signOut()
         .then(() => {
           console.log('Sėkmingai atsijungta');
+          document.getElementById('app-container').style.display = 'none';
+          document.getElementById('auth-container').style.display = 'block';
         })
         .catch(error => {
           console.error('Klaida atsijungiant:', error);
