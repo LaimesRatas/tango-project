@@ -43,23 +43,34 @@
         <a class="nav-item nav-inactive">Iššūkis</a>
       </div>
       
-      <div class="user-icon" id="user-profile">
-        <!-- Čia bus vartotojo inicialai arba paveikslėlis -->
+      <div class="header-right">
+        <!-- Naujas skaitliuko dizainas su skydo ikona -->
+        <div class="achievement-counter">
+          <div class="shield-icon">
+            <img src="skydas.png" alt="Skydas" class="shield-image">
+            <span class="counter-number" id="completed-count-new">1</span>
+          </div>
+        </div>
+        
+        <div class="user-icon" id="user-profile">
+          <!-- Čia bus vartotojo inicialai arba paveikslėlis -->
+        </div>
+        
+        <!-- Atsijungimo mygtukas (paslėptas, bet reikalingas diagnostikai) -->
+        <button id="sign-out-btn" style="display: none;">Atsijungti</button>
       </div>
+    </div>
+    
+    <!-- Paslėpti senus skaitliukus, bet palikti juos HTML (diagnostikos tikslais) -->
+    <div style="display: none;">
+      <span id="active-count">0</span>
+      <span id="completed-count">0</span>
     </div>
     
     <!-- Upload buttons -->
     <div class="upload-section">
       <button class="upload-button" id="youtube-upload-btn">Įkelti Youtube</button>
       <button class="upload-button" id="file-upload-btn">Įkelti failą</button>
-      
-      <!-- Naujas skaitliuko dizainas su skydo ikona -->
-      <div class="achievement-counter">
-        <div class="shield-icon">
-          <img src="skydas.png" alt="Skydas" class="shield-image">
-          <span class="counter-number" id="completed-count-new">1</span>
-        </div>
-      </div>
       
       <input type="file" id="video-file" accept="video/*" style="display:none;">
     </div>
