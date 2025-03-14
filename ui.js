@@ -344,12 +344,6 @@ const UI = {
       // Sukuriame unikalų ID
       const videoId = 'local_' + Date.now();
       
-      // Išsaugome video failą
-      await DataStore.saveVideoFile(videoId, this.selectedFile);
-      
-      // Rodome 100% progresą
-      uploadProgressBar.style.width = '100%';
-      
       // Sukuriame naują video objektą
       const newVideo = {
         id: videoId,
@@ -360,34 +354,55 @@ const UI = {
         dateAdded: new Date().toISOString()
       };
       
-      // Pridedame į duomenų saugyklą
+      // Pridedame į duomenų saugyklą (prieš įkėlimą, kad matytume kortelę)
       DataStore.addVideo(newVideo);
       
-      // Atnaujiname vaizdą
-      this.renderVideos();
-      this.updateCounters();
-      
-      // Uždarome popup po 1s
-      setTimeout(() => {
+      try {
+        // Išsaugome video failą į Firebase Storage
+        await DataStore.saveVideoFile(videoId, this.selectedFile);
+        
+        // Rodome 100% progresą (tai jau turėtų būti atlikta per saveVideoFile, bet dėl visa ko)
+        uploadProgressBar.style.width = '100%';
+        
+        // Atnaujiname vaizdą
+        this.renderVideos();
+        this.updateCounters();
+        
+        // Uždarome popup po 1s
+        setTimeout(() => {
+          const popup = document.getElementById('file-popup');
+          const titleInput = document.getElementById('file-title');
+          const categorySelect = document.getElementById('file-category');
+          const fileSizeLimit = document.getElementById('file-size-limit');
+          const uploadProgress = document.getElementById('upload-progress');
+          const videoFile = document.getElementById('video-file');
+          
+          if (popup) popup.style.display = 'none';
+          if (titleInput) titleInput.value = '';
+          if (categorySelect) categorySelect.value = 'tango';
+          if (fileSizeLimit) fileSizeLimit.style.display = 'none';
+          if (uploadProgress) uploadProgress.style.display = 'none';
+          if (videoFile) videoFile.value = null;
+          
+          this.selectedFile = null;
+          
+          // Rodome kategoriją, kurioje yra naujas video
+          this.showCategory(category);
+        }, 1000);
+      } catch (error) {
+        console.error('Error uploading video file:', error);
+        alert('Nepavyko įkelti video: ' + (error.message || 'Nežinoma klaida'));
+        
+        // Ištriname video objektą, jei nepavyko įkelti failo
+        DataStore.deleteVideo(videoId);
+        
         const popup = document.getElementById('file-popup');
-        const titleInput = document.getElementById('file-title');
-        const categorySelect = document.getElementById('file-category');
-        const fileSizeLimit = document.getElementById('file-size-limit');
-        const uploadProgress = document.getElementById('upload-progress');
         const videoFile = document.getElementById('video-file');
         
         if (popup) popup.style.display = 'none';
-        if (titleInput) titleInput.value = '';
-        if (categorySelect) categorySelect.value = 'tango';
-        if (fileSizeLimit) fileSizeLimit.style.display = 'none';
-        if (uploadProgress) uploadProgress.style.display = 'none';
         if (videoFile) videoFile.value = null;
-        
         this.selectedFile = null;
-      }, 1000);
-      
-      // Rodome kategoriją, kurioje yra naujas video
-      this.showCategory(category);
+      }
     } catch (error) {
       console.error('Error uploading video:', error);
       alert('Nepavyko įkelti video');
@@ -467,21 +482,44 @@ const UI = {
         videoElement.controls = true;
         videoElement.className = 'thumbnail';
         
-        // Bandome gauti video failą
+        // Pažymime, kad video kraunamas
+        const loadingPlaceholder = document.createElement('div');
+        loadingPlaceholder.style.width = '100%';
+        loadingPlaceholder.style.height = '150px';
+        loadingPlaceholder.style.display = 'flex';
+        loadingPlaceholder.style.alignItems = 'center';
+        loadingPlaceholder.style.justifyContent = 'center';
+        loadingPlaceholder.style.backgroundColor = '#eee';
+        loadingPlaceholder.textContent = 'Video kraunamas...';
+        
+        videoContainer.appendChild(loadingPlaceholder);
+        
+        // Bandome gauti video failą iš Firebase Storage
         DataStore.getVideoFile(video.id)
-          .then(file => {
-            if (file) {
-              videoElement.src = URL.createObjectURL(file);
+          .then(fileURL => {
+            if (fileURL) {
+              // Jei gavome URL, pašaliname placeholder ir rodome video
+              videoContainer.innerHTML = '';
+              
+              videoElement.src = fileURL;
+              videoElement.onerror = () => {
+                videoElement.poster = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 640 360%22%3E%3Crect width%3D%22640%22 height%3D%22360%22 fill%3D%22%23f8d7da%22%3E%3C%2Frect%3E%3Ctext x%3D%22320%22 y%3D%22180%22 text-anchor%3D%22middle%22 dominant-baseline%3D%22middle%22 font-family%3D%22sans-serif%22 font-size%3D%2224%22 fill%3D%22%23721c24%22%3EKlaida paleidžiant video%3C%2Ftext%3E%3C%2Fsvg%3E';
+              };
+              
+              videoContainer.appendChild(videoElement);
             } else {
-              videoElement.poster = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 640 360%22%3E%3Crect width%3D%22640%22 height%3D%22360%22 fill%3D%22%23eee%22%3E%3C%2Frect%3E%3Ctext x%3D%22320%22 y%3D%22180%22 text-anchor%3D%22middle%22 dominant-baseline%3D%22middle%22 font-family%3D%22sans-serif%22 font-size%3D%2224%22 fill%3D%22%23999%22%3EVideo not found%3C%2Ftext%3E%3C%2Fsvg%3E';
+              // Jei URL nėra, rodome klaidos pranešimą
+              loadingPlaceholder.style.backgroundColor = '#f8d7da';
+              loadingPlaceholder.style.color = '#721c24';
+              loadingPlaceholder.textContent = 'Video failas nerastas';
             }
           })
           .catch(error => {
             console.error('Error loading video file:', error);
-            videoElement.poster = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 640 360%22%3E%3Crect width%3D%22640%22 height%3D%22360%22 fill%3D%22%23f8d7da%22%3E%3C%2Frect%3E%3Ctext x%3D%22320%22 y%3D%22180%22 text-anchor%3D%22middle%22 dominant-baseline%3D%22middle%22 font-family%3D%22sans-serif%22 font-size%3D%2224%22 fill%3D%22%23721c24%22%3EError loading video%3C%2Ftext%3E%3C%2Fsvg%3E';
+            loadingPlaceholder.style.backgroundColor = '#f8d7da';
+            loadingPlaceholder.style.color = '#721c24';
+            loadingPlaceholder.textContent = 'Klaida kraunant video';
           });
-        
-        videoContainer.appendChild(videoElement);
       }
       
       card.appendChild(videoContainer);
