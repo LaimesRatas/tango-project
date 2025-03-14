@@ -8,13 +8,8 @@ const DataStore = {
   completedIds: [],
   userId: null,
   
-  // Duomenų bazės konfigūracija
-  db: null,
-  dbConfig: {
-    name: 'VideoStoreDB',
-    version: 2,
-    store: 'videoFiles'
-  },
+  // Firebase Storage nuoroda
+  storage: null,
   
   /**
    * Inicializuoja duomenų saugyklą
@@ -23,17 +18,12 @@ const DataStore = {
     try {
       console.log('Initializing Data Store...');
       
-      // Bandome inicializuoti IndexedDB, bet jei nepavyksta - tęsiame
-      try {
-        if (window.indexedDB) {
-          await this.initDatabase();
-          console.log('IndexedDB initialized successfully');
-        } else {
-          console.warn('Browser does not support IndexedDB');
-        }
-      } catch (dbError) {
-        console.warn('IndexedDB initialization failed, will use Firebase only:', dbError);
-        // Tęsiame net jei IndexedDB nepavyko - naudosime tik Firebase ir localStorage
+      // Inicializuojame Firebase Storage
+      if (firebase && firebase.storage) {
+        this.storage = firebase.storage();
+        console.log('Firebase Storage initialized successfully');
+      } else {
+        console.warn('Firebase Storage is not available');
       }
       
       // Užkrauname išsaugotus lokalius duomenis (jei nėra prisijungusio vartotojo)
@@ -46,70 +36,6 @@ const DataStore = {
       // Net jei yra klaida, grąžiname true, kad aplikacija galėtų veikti
       return true;
     }
-  },
-  
-  /**
-   * Inicializuoja IndexedDB duomenų bazę
-   */
-  initDatabase() {
-    return new Promise((resolve, reject) => {
-      try {
-        // Patikrinkime, ar indexedDB yra pasiekiamas
-        if (!window.indexedDB) {
-          console.error('Your browser does not support IndexedDB');
-          reject('IndexedDB not supported');
-          return;
-        }
-        
-        const request = indexedDB.open(this.dbConfig.name, this.dbConfig.version);
-        
-        request.onerror = (event) => {
-          console.error('Database error:', event.target.error);
-          reject('Failed to open database: ' + (event.target.error ? event.target.error.message : 'Unknown error'));
-        };
-        
-        request.onupgradeneeded = (event) => {
-          try {
-            const db = event.target.result;
-            const oldVersion = event.oldVersion;
-            
-            // Sukuriame objektų saugyklą, jei jos dar nėra
-            if (!db.objectStoreNames.contains(this.dbConfig.store)) {
-              db.createObjectStore(this.dbConfig.store, { keyPath: 'id' });
-              console.log('Created object store:', this.dbConfig.store);
-            }
-            
-            // Migracija iš v1 į v2 (jei reikalinga)
-            if (oldVersion < 2) {
-              console.log('Migrating IndexedDB schema from version', oldVersion, 'to version 2');
-              // Čia galime pridėti papildomą migracijos logiką, jei reikia
-            }
-          } catch (error) {
-            console.error('Error during database upgrade:', error);
-          }
-        };
-        
-        request.onsuccess = (event) => {
-          try {
-            this.db = event.target.result;
-            
-            // Pridedame klaidų gaudymo įvykį
-            this.db.onerror = (event) => {
-              console.error('Database error:', event.target.error);
-            };
-            
-            console.log('Database opened successfully');
-            resolve(this.db);
-          } catch (error) {
-            console.error('Error in database success handler:', error);
-            reject(error);
-          }
-        };
-      } catch (error) {
-        console.error('Error setting up IndexedDB:', error);
-        reject(error);
-      }
-    });
   },
   
   /**
@@ -428,80 +354,156 @@ const DataStore = {
   },
   
   /**
-   * Išsaugo video failą į IndexedDB
+   * Išsaugo video failą į Firebase Storage
    * @param {string} id - Video ID
    * @param {File} file - Video failas
    * @returns {Promise} - Sėkmės arba klaidos promise
    */
   saveVideoFile(id, file) {
-    return new Promise((resolve, reject) => {
-      // Jei IndexedDB nėra inicializuota, išsaugome tik duomenis
-      if (!this.db) {
-        console.warn('IndexedDB not available, skipping file storage');
-        resolve(true);
-        return;
-      }
-      
+    return new Promise(async (resolve, reject) => {
       try {
-        const transaction = this.db.transaction([this.dbConfig.store], 'readwrite');
-        const store = transaction.objectStore(this.dbConfig.store);
-        const request = store.put({ id, file });
+        // Patikrinti ar turime Firebase Storage
+        if (!this.storage) {
+          console.warn('Firebase Storage not available, cannot save file');
+          reject(new Error('Firebase Storage neprieinamas'));
+          return;
+        }
         
-        request.onsuccess = () => {
-          console.log('Video file saved to database:', id);
-          resolve(true);
-        };
+        // Patikrinti ar turime vartotojo ID
+        const userId = this.userId || 'anonymous';
         
-        request.onerror = (e) => {
-          console.error('Error saving video file:', e.target.error);
-          // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
-          resolve(true);
-        };
+        // Sukurti kelią iki failo
+        const filePath = `videos/${userId}/${id}`;
+        const storageRef = this.storage.ref(filePath);
+        
+        // Paruošiame upload task
+        const uploadTask = storageRef.put(file);
+        
+        // Stebime progresą
+        uploadTask.on('state_changed', 
+          // Progress funkcija
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log(`Įkėlimo progresas: ${progress.toFixed(2)}%`);
+            
+            // Jei turime upload-progress-bar elementą, atnaujiname jį
+            const progressBar = document.getElementById('upload-progress-bar');
+            if (progressBar) {
+              progressBar.style.width = `${progress}%`;
+            }
+          },
+          // Error funkcija
+          (error) => {
+            console.error('Klaida įkeliant failą į Firebase Storage:', error);
+            reject(error);
+          },
+          // Completion funkcija
+          () => {
+            console.log('Failas sėkmingai įkeltas į Firebase Storage:', filePath);
+            
+            // Gauname failo URL ir atnaujiname video objektą
+            uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+              // Randame video objektą
+              const videoIndex = this.videos.findIndex(v => v.id === id);
+              if (videoIndex !== -1) {
+                // Atnaujiname video objektą su failo URL
+                this.videos[videoIndex].fileURL = downloadURL;
+                this.videos[videoIndex].storagePath = filePath;
+                
+                // Išsaugome duomenis
+                this.saveData();
+              }
+              
+              resolve(downloadURL);
+            }).catch(error => {
+              console.error('Klaida gaunant failo URL:', error);
+              reject(error);
+            });
+          }
+        );
       } catch (error) {
-        console.error('Error in saveVideoFile:', error);
-        // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
-        resolve(true);
+        console.error('Klaida išsaugant vaizdo failą:', error);
+        reject(error);
       }
     });
   },
   
   /**
-   * Gauna video failą iš IndexedDB
+   * Gauna video failą iš Firebase Storage
    * @param {string} id - Video ID
-   * @returns {Promise<File|null>} - Video failas arba null
+   * @returns {Promise<string|null>} - Video failo URL arba null
    */
   getVideoFile(id) {
-    return new Promise((resolve, reject) => {
-      // Jei IndexedDB nėra inicializuota, grąžiname null
-      if (!this.db) {
-        console.warn('IndexedDB not available, cannot retrieve file');
-        resolve(null);
-        return;
-      }
-      
+    return new Promise(async (resolve, reject) => {
       try {
-        const transaction = this.db.transaction([this.dbConfig.store], 'readonly');
-        const store = transaction.objectStore(this.dbConfig.store);
-        const request = store.get(id);
+        // Randame video pagal ID
+        const video = this.videos.find(v => v.id === id);
         
-        request.onsuccess = (event) => {
-          const result = event.target.result;
+        if (!video) {
+          console.log('Video not found:', id);
+          resolve(null);
+          return;
+        }
+        
+        // Jei turime jau išsaugotą URL, grąžiname jį
+        if (video.fileURL) {
+          console.log('Using cached video URL:', video.fileURL);
+          resolve(video.fileURL);
+          return;
+        }
+        
+        // Patikrinti ar turime Firebase Storage
+        if (!this.storage) {
+          console.warn('Firebase Storage not available, cannot get file');
+          reject(new Error('Firebase Storage neprieinamas'));
+          return;
+        }
+        
+        // Jei turime storage path, bandome gauti URL
+        if (video.storagePath) {
+          const storageRef = this.storage.ref(video.storagePath);
           
-          if (result && result.file) {
-            console.log('Video file retrieved from database:', id);
-            resolve(result.file);
-          } else {
-            console.log('Video file not found in database:', id);
+          try {
+            const url = await storageRef.getDownloadURL();
+            
+            // Išsaugome URL video objekte
+            const videoIndex = this.videos.findIndex(v => v.id === id);
+            if (videoIndex !== -1) {
+              this.videos[videoIndex].fileURL = url;
+              this.saveData();
+            }
+            
+            resolve(url);
+          } catch (error) {
+            console.error('Klaida gaunant failo URL iš Storage:', error);
             resolve(null);
           }
-        };
-        
-        request.onerror = (e) => {
-          console.error('Error getting video file:', e.target.error);
-          resolve(null);
-        };
+        } else {
+          // Jei neturime storage path, bandome sukurti jį
+          const userId = this.userId || 'anonymous';
+          const filePath = `videos/${userId}/${id}`;
+          
+          const storageRef = this.storage.ref(filePath);
+          
+          try {
+            const url = await storageRef.getDownloadURL();
+            
+            // Išsaugome URL ir path video objekte
+            const videoIndex = this.videos.findIndex(v => v.id === id);
+            if (videoIndex !== -1) {
+              this.videos[videoIndex].fileURL = url;
+              this.videos[videoIndex].storagePath = filePath;
+              this.saveData();
+            }
+            
+            resolve(url);
+          } catch (error) {
+            console.log('Failas nerastas Storage:', filePath);
+            resolve(null);
+          }
+        }
       } catch (error) {
-        console.error('Error in getVideoFile:', error);
+        console.error('Klaida gaunant vaizdo failą:', error);
         resolve(null);
       }
     });
@@ -587,12 +589,12 @@ const DataStore = {
       // Šaliname iš video sąrašo
       this.videos.splice(index, 1);
       
-      // Jei tai lokalus video, bandome šalinti failą (jei IndexedDB veikia)
-      if (video.type === 'local' && this.db) {
+      // Jei tai lokalus video ir turime storagePath, bandome šalinti failą iš Storage
+      if (video.type === 'local' && video.storagePath && this.storage) {
         try {
           await this.deleteVideoFile(id);
         } catch (error) {
-          console.error('Failed to delete video file:', error);
+          console.error('Failed to delete video file from Storage:', error);
           // Tęsiame net jei nepavyko ištrinti failo
         }
       }
@@ -615,34 +617,41 @@ const DataStore = {
   },
   
   /**
-   * Ištrina video failą iš IndexedDB
+   * Ištrina video failą iš Firebase Storage
    * @param {string} id - Video ID
    * @returns {Promise} - Sėkmės arba klaidos promise
    */
   deleteVideoFile(id) {
-    return new Promise((resolve, reject) => {
-      // Jei IndexedDB nėra inicializuota, tiesiog pranešame sėkmę
-      if (!this.db) {
-        console.warn('IndexedDB not available, cannot delete file');
-        resolve(true);
-        return;
-      }
-      
+    return new Promise(async (resolve, reject) => {
       try {
-        const transaction = this.db.transaction([this.dbConfig.store], 'readwrite');
-        const store = transaction.objectStore(this.dbConfig.store);
-        const request = store.delete(id);
-        
-        request.onsuccess = () => {
-          console.log('Video file deleted from database:', id);
+        // Patikrinti ar turime Firebase Storage
+        if (!this.storage) {
+          console.warn('Firebase Storage not available, cannot delete file');
           resolve(true);
-        };
+          return;
+        }
         
-        request.onerror = (e) => {
-          console.error('Error deleting video file:', e.target.error);
+        // Randame video pagal ID
+        const video = this.videos.find(v => v.id === id);
+        
+        if (!video || !video.storagePath) {
+          console.log('Video not found or no storage path available');
+          resolve(true);
+          return;
+        }
+        
+        // Pašaliname failą iš Firebase Storage
+        const storageRef = this.storage.ref(video.storagePath);
+        
+        try {
+          await storageRef.delete();
+          console.log('Video file deleted from Firebase Storage:', video.storagePath);
+          resolve(true);
+        } catch (error) {
+          console.error('Error deleting video file from Storage:', error);
           // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
           resolve(true);
-        };
+        }
       } catch (error) {
         console.error('Error in deleteVideoFile:', error);
         // Vis tiek grąžiname true, kad aplikacija galėtų tęsti
